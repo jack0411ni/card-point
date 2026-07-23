@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>卡牌計分器 (雙模式切換版)</title>
+    <title>卡牌計分器 (雙模式+倍率版)</title>
     <style>
         body {
             font-family: "Microsoft JhengHei", Arial, sans-serif;
@@ -22,7 +22,7 @@
             border-radius: 10px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             width: 100%;
-            max-width: 480px;
+            max-width: 500px; /* 稍微加寬以容納倍率選單 */
         }
         h2 {
             text-align: center;
@@ -52,7 +52,7 @@
             font-size: 13px;
             font-weight: bold;
             margin-bottom: 15px;
-            min-height: 20px; /* 預留高度避免切換時跳動 */
+            min-height: 35px;
         }
         
         /* 列表標題列 */
@@ -73,7 +73,7 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 12px;
-            gap: 8px;
+            gap: 6px;
             transition: opacity 0.3s;
         }
         .player-row.disabled { opacity: 0.5; }
@@ -86,7 +86,7 @@
         }
         .name-input {
             flex: 1;
-            min-width: 60px;
+            min-width: 50px;
             padding: 8px 5px;
             font-size: 16px;
             font-weight: bold;
@@ -95,8 +95,8 @@
             background-color: #f8f9fa; 
         }
         .score-input {
-            width: 70px;
-            padding: 8px 5px;
+            width: 65px;
+            padding: 8px 2px;
             font-size: 16px;
             text-align: right;
             border: 1px solid #90caf9; 
@@ -104,16 +104,62 @@
             border-radius: 4px;
             font-weight: bold;
         }
-        .round-input {
-            width: 70px;
+        
+        /* 大老二輸入框 */
+        .cards-input {
+            width: 125px; /* 與十三張區塊對齊寬度 */
             padding: 8px 5px;
             font-size: 16px;
             text-align: right;
             border: 1px solid #ccc;
             border-radius: 4px;
+            box-sizing: border-box;
         }
-        .round-input:disabled {
+        .cards-input:disabled {
             background-color: #e9ecef;
+            cursor: not-allowed;
+        }
+
+        /* 十十三張輸入框 (贏/輸/倍率) */
+        .thirteen-inputs {
+            width: 125px;
+            display: none; 
+            gap: 4px;
+            align-items: center;
+        }
+        .win-input, .lose-input {
+            width: 35px;
+            padding: 8px 2px;
+            font-size: 15px;
+            text-align: center;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .win-input {
+            border: 1px solid #ffcdd2;
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        .lose-input {
+            border: 1px solid #bbdefb;
+            background-color: #e3f2fd;
+            color: #1565c0;
+        }
+        .mult-select {
+            width: 45px;
+            padding: 7px 0px;
+            font-size: 14px;
+            font-weight: bold;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: #fff;
+            text-align: center;
+            cursor: pointer;
+        }
+        .win-input:disabled, .lose-input:disabled, .mult-select:disabled {
+            background-color: #f5f5f5;
+            border-color: #e0e0e0;
+            color: #9e9e9e;
             cursor: not-allowed;
         }
         
@@ -185,19 +231,17 @@
     <div class="mode-selector">
         <select id="gameMode" onchange="switchMode()">
             <option value="big2">模式：大老二 (剩牌)</option>
-            <option value="13cards">模式：十三張 (墩數)</option>
+            <option value="13cards">模式：十三張 (贏/輸/倍率)</option>
         </select>
     </div>
 
-    <div class="rule-hint" id="ruleHint">
-        💡 規則：剩9-12張(x2) / 剩13張以上(x4)
-    </div>
+    <div class="rule-hint" id="ruleHint"></div>
     
     <div class="list-header">
         <span style="width: 25px;">參加</span>
         <span style="flex: 1; text-align: left;">玩家</span>
-        <span style="width: 80px;">總積分</span>
-        <span style="width: 80px;" id="roundInputTitle">本輪剩牌</span>
+        <span style="width: 65px;">總積分</span>
+        <span style="width: 125px;" id="roundInputTitle">本輪剩牌</span>
     </div>
 
     <div id="playerList"></div>
@@ -236,8 +280,8 @@
             addPlayer(name, index);
         });
         loadGameData();
+        switchMode(); 
         updateResultBoard({});
-        switchMode(); // 初始化文字顯示
     };
 
     function addPlayer(name, id) {
@@ -249,45 +293,78 @@
                 <input type="checkbox" id="active${id}" class="active-toggle" checked onchange="togglePlayer(${id}); saveGameData();" title="是否參加本局">
                 <input type="text" id="name${id}" value="${name}" class="name-input" readonly>
                 <input type="number" id="score${id}" value="" placeholder="0" class="score-input" title="可手動修改現有積分" onchange="saveGameData(); updateResultBoard({});">
-                <input type="number" id="roundInput${id}" value="" placeholder="0" class="round-input">
+                
+                <!-- 大老二輸入框 -->
+                <input type="number" id="cardsInput${id}" value="" placeholder="0" min="0" class="cards-input">
+                
+                <!-- 十三張輸入框 -->
+                <div id="thirteenInputs${id}" class="thirteen-inputs">
+                    <input type="number" id="winInput${id}" placeholder="贏" class="win-input" min="0">
+                    <input type="number" id="loseInput${id}" placeholder="輸" class="lose-input" min="0">
+                    <select id="multInput${id}" class="mult-select">
+                        <option value="1">x1</option>
+                        <option value="2">x2</option>
+                        <option value="3">x3</option>
+                        <option value="4">x4</option>
+                        <option value="6">x6</option>
+                        <option value="8">x8</option>
+                    </select>
+                </div>
             </div>
         `;
         list.insertAdjacentHTML('beforeend', rowHTML);
     }
 
-    // ★ 模式切換功能 ★
+    // ★ 模式切換與介面變更 ★
     function switchMode() {
         const mode = document.getElementById('gameMode').value;
         const hint = document.getElementById('ruleHint');
         const inputTitle = document.getElementById('roundInputTitle');
         
         if (mode === 'big2') {
-            hint.innerHTML = '💡 規則：剩9-12張(x2) / 剩13張以上(x4)';
-            inputTitle.innerText = '本輪剩牌';
-            // 大老二只能輸入正數 (因為是剩牌數量)
-            playersData.forEach(p => document.getElementById('roundInput' + p.id).min = "0");
+            hint.innerHTML = '💡 大老二規則：剩9-12張(x2) / 剩13張以上(x4)';
+            inputTitle.innerHTML = '本輪剩牌';
+            playersData.forEach(p => {
+                document.getElementById('cardsInput' + p.id).style.display = 'block';
+                document.getElementById('thirteenInputs' + p.id).style.display = 'none';
+            });
         } else {
-            hint.innerHTML = '💡 規則：手動輸入十三張結算分數 (+/-)<br><span style="color:#666; font-size:11px;">※ 所有參加者的加扣分總和必須為 0</span>';
-            inputTitle.innerText = '本輪得分';
-            // 十三張可以輸入正負數
-            playersData.forEach(p => document.getElementById('roundInput' + p.id).removeAttribute('min'));
+            hint.innerHTML = '💡 十三張規則：打槍/全壘打可直接調整「倍率」<br><span style="color:#666; font-size:11px;">(全場結算後的總贏分必須等於總輸分)</span>';
+            inputTitle.innerHTML = '<span style="color:#d32f2f">贏</span> / <span style="color:#1976d2">輸</span> / <span>倍率</span>';
+            playersData.forEach(p => {
+                document.getElementById('cardsInput' + p.id).style.display = 'none';
+                document.getElementById('thirteenInputs' + p.id).style.display = 'flex';
+            });
         }
         
-        // 儲存模式選擇
         localStorage.setItem('cardGameMode', mode);
     }
 
+    // ★ 處理輪休勾選狀態 ★
     function togglePlayer(id) {
         const isChecked = document.getElementById('active' + id).checked;
-        const roundInput = document.getElementById('roundInput' + id);
+        const cardsInput = document.getElementById('cardsInput' + id);
+        const winInput = document.getElementById('winInput' + id);
+        const loseInput = document.getElementById('loseInput' + id);
+        const multInput = document.getElementById('multInput' + id);
         const row = document.getElementById('row' + id);
         
         if (isChecked) {
-            roundInput.disabled = false;
+            cardsInput.disabled = false;
+            winInput.disabled = false;
+            loseInput.disabled = false;
+            multInput.disabled = false;
             row.classList.remove('disabled');
         } else {
-            roundInput.disabled = true;
-            roundInput.value = ''; 
+            cardsInput.disabled = true;
+            winInput.disabled = true;
+            loseInput.disabled = true;
+            multInput.disabled = true;
+            
+            cardsInput.value = ''; 
+            winInput.value = '';
+            loseInput.value = '';
+            multInput.value = '1';
             row.classList.add('disabled');
         }
     }
@@ -305,7 +382,6 @@
     }
 
     function loadGameData() {
-        // 讀取模式
         let savedMode = localStorage.getItem('cardGameMode');
         if (savedMode) {
             document.getElementById('gameMode').value = savedMode;
@@ -361,8 +437,12 @@
                 }
             });
             
+            // 清空所有輸入框並還原倍率
             playersData.forEach(p => {
-                document.getElementById('roundInput' + p.id).value = '';
+                document.getElementById('cardsInput' + p.id).value = '';
+                document.getElementById('winInput' + p.id).value = '';
+                document.getElementById('loseInput' + p.id).value = '';
+                document.getElementById('multInput' + p.id).value = '1';
             });
 
             saveGameData();
@@ -376,92 +456,104 @@
         else return cards;
     }
 
-    // ★ 核心計算邏輯分流 ★
+    // ★ 核心計算邏輯 ★
     function calculateRound() {
         const mode = document.getElementById('gameMode').value;
         let activePlayersCount = 0;
-        let roundInputs = {};
+        let roundScores = {}; 
         
-        // 抓取所有有參加的玩家輸入值
-        playersData.forEach(p => {
-            if (document.getElementById('active' + p.id).checked) {
-                roundInputs[p.id] = parseInt(document.getElementById('roundInput' + p.id).value) || 0;
-                activePlayersCount++;
-            }
-        });
-
-        if (activePlayersCount < 2) {
-            alert("至少需要兩位玩家參加才能計算分數！");
-            return;
-        }
-
-        let roundScores = {};
-
-        // -----------------------------
-        // 邏輯 A：大老二模式
-        // -----------------------------
         if (mode === 'big2') {
             let totalPenalty = 0;
+            let roundCards = {};
             let roundPenalties = {};
 
-            for (let id in roundInputs) {
-                let cards = roundInputs[id];
-                let penalty = getPenaltyPoints(cards);
-                roundPenalties[id] = penalty;
-                totalPenalty += penalty;
-            }
+            playersData.forEach(p => {
+                if (document.getElementById('active' + p.id).checked) {
+                    let cards = parseInt(document.getElementById('cardsInput' + p.id).value) || 0;
+                    roundCards[p.id] = cards;
+                    
+                    let penalty = getPenaltyPoints(cards);
+                    roundPenalties[p.id] = penalty;
+                    
+                    totalPenalty += penalty;
+                    activePlayersCount++;
+                }
+            });
 
+            if (activePlayersCount < 2) {
+                alert("至少需要兩位玩家參加才能計算！");
+                return;
+            }
             if (totalPenalty === 0) {
                 alert("請至少輸入一位輸家的剩餘牌數！");
                 return;
             }
 
-            for (let id in roundInputs) {
-                if (roundInputs[id] === 0) {
+            for (let id in roundCards) {
+                if (roundCards[id] === 0) {
                     roundScores[id] = totalPenalty; 
                 } else {
                     roundScores[id] = -roundPenalties[id]; 
                 }
             }
         } 
-        // -----------------------------
-        // 邏輯 B：十三張模式 (暫時為手動加總)
-        // -----------------------------
         else if (mode === '13cards') {
-            let sum = 0;
+            let totalWin = 0;
+            let totalLose = 0;
             let hasInput = false;
 
-            for (let id in roundInputs) {
-                if (roundInputs[id] !== 0) hasInput = true;
-                sum += roundInputs[id];
-                roundScores[id] = roundInputs[id];
-            }
+            playersData.forEach(p => {
+                if (document.getElementById('active' + p.id).checked) {
+                    let win = parseInt(document.getElementById('winInput' + p.id).value) || 0;
+                    let lose = parseInt(document.getElementById('loseInput' + p.id).value) || 0;
+                    let mult = parseInt(document.getElementById('multInput' + p.id).value) || 1; // 抓取倍率
+                    
+                    if (win !== 0 || lose !== 0) hasInput = true;
+                    
+                    // 將基礎分數乘上倍率
+                    let finalWin = win * mult;
+                    let finalLose = lose * mult;
+                    
+                    totalWin += finalWin;
+                    totalLose += finalLose;
+                    
+                    // 該局個人的淨分數 = 乘過倍率的贏分 - 輸分
+                    roundScores[p.id] = finalWin - finalLose; 
+                    activePlayersCount++;
+                }
+            });
 
+            if (activePlayersCount < 2) {
+                alert("至少需要兩位玩家參加才能計算！");
+                return;
+            }
             if (!hasInput) {
-                alert("請輸入玩家的加扣分！");
+                alert("請填寫玩家的贏分或輸分！");
                 return;
             }
 
-            // 十三張防呆：總和必須為 0
-            if (sum !== 0) {
-                alert(`計算錯誤！目前輸入的總和為 ${sum}。\n\n十三張的贏分與輸分加總必須剛好等於 0，請檢查是否有人分數打錯。`);
+            // 十三張防呆：總贏分必須等於總輸分
+            if (totalWin !== totalLose) {
+                alert(`❌ 記分錯誤！(已自動包含倍率計算)\n\n全場【總贏分: ${totalWin}】\n全場【總輸分: ${totalLose}】\n\n兩者不相等，請檢查是否有人分數或倍率按錯了！`);
                 return;
             }
         }
 
-        // 備份目前的狀態當作「上一步」
+        // 備份狀態當作「上一步」
         backupHistory();
 
-        // 結算並更新分數
+        // 結算並更新總分
         playersData.forEach(p => {
-            const isActive = document.getElementById('active' + p.id).checked;
-            if (isActive) {
+            if (document.getElementById('active' + p.id).checked) {
                 let currentScore = parseInt(document.getElementById('score' + p.id).value) || 0;
                 let newScore = currentScore + roundScores[p.id];
                 document.getElementById('score' + p.id).value = newScore === 0 ? '' : newScore;
                 
-                // 清空輸入框
-                document.getElementById('roundInput' + p.id).value = '';
+                // 計算完畢自動清空，並把倍率歸位為 x1
+                document.getElementById('cardsInput' + p.id).value = '';
+                document.getElementById('winInput' + p.id).value = '';
+                document.getElementById('loseInput' + p.id).value = '';
+                document.getElementById('multInput' + p.id).value = '1';
             }
         });
 
@@ -476,7 +568,10 @@
             playersData.forEach(p => {
                 document.getElementById('score' + p.id).value = '';
                 if (!document.getElementById('active' + p.id).disabled) {
-                    document.getElementById('roundInput' + p.id).value = '';
+                    document.getElementById('cardsInput' + p.id).value = '';
+                    document.getElementById('winInput' + p.id).value = '';
+                    document.getElementById('loseInput' + p.id).value = '';
+                    document.getElementById('multInput' + p.id).value = '1';
                 }
             });
             updateResultBoard({});
