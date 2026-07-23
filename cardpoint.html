@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>卡牌計分器 (自動存檔版)</title>
+    <style>
+        body {
+            font-family: "Microsoft JhengHei", Arial, sans-serif;
+            background-color: #f4f4f9;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .container {
+            background-color: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            width: 100%;
+            max-width: 480px;
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-top: 0;
+            margin-bottom: 5px;
+        }
+        .rule-hint {
+            text-align: center;
+            color: #d32f2f;
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        
+        /* 列表標題列 */
+        .list-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 8px;
+            padding: 0 5px;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        /* 玩家列表區塊 */
+        .player-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            gap: 8px;
+            transition: opacity 0.3s;
+        }
+        .player-row.disabled {
+            opacity: 0.5;
+        }
+        .active-toggle {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: #4CAF50;
+            margin: 0;
+        }
+        .name-input {
+            flex: 1;
+            min-width: 60px;
+            padding: 8px 5px;
+            font-size: 16px;
+            font-weight: bold;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: #f8f9fa; 
+        }
+        .score-input {
+            width: 70px;
+            padding: 8px 5px;
+            font-size: 16px;
+            text-align: right;
+            border: 1px solid #90caf9; 
+            background-color: #e3f2fd;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .cards-input {
+            width: 70px;
+            padding: 8px 5px;
+            font-size: 16px;
+            text-align: right;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .cards-input:disabled {
+            background-color: #e9ecef;
+            cursor: not-allowed;
+        }
+        
+        /* 按鈕區塊 */
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        button {
+            flex: 1;
+            padding: 12px;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .calc-btn { background-color: #4CAF50; }
+        .calc-btn:hover { background-color: #45a049; }
+        .reset-btn { background-color: #f44336; }
+        .reset-btn:hover { background-color: #da190b; }
+        
+        /* 結果區塊 */
+        .result-box {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            text-align: center;
+        }
+        th, td {
+            padding: 8px 5px;
+            border-bottom: 1px solid #ccc;
+        }
+        th { font-size: 14px; color: #555; }
+        td { font-size: 16px; font-weight: bold; }
+        
+        .positive { color: #d32f2f; } 
+        .negative { color: #1976d2; } 
+        .inactive-text { color: #888; font-size: 14px; font-weight: normal; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🏆 專屬卡牌積分台</h2>
+    <div class="rule-hint">💡 規則：剩9-12張(x2) / 剩13張以上(x4) <br> (系統會自動儲存進度)</div>
+    
+    <div class="list-header">
+        <span style="width: 25px;">參加</span>
+        <span style="flex: 1; text-align: left;">玩家</span>
+        <span style="width: 80px;">總積分</span>
+        <span style="width: 80px;">本輪剩牌</span>
+    </div>
+
+    <div id="playerList"></div>
+
+    <div class="btn-group">
+        <button class="calc-btn" onclick="calculateRound()">計算本輪</button>
+        <button class="reset-btn" onclick="resetScores()">全場歸零</button>
+    </div>
+
+    <div class="result-box">
+        <h3 style="margin:0 0 10px 0; text-align:center;">目前戰況</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>玩家</th>
+                    <th>本輪加扣分</th>
+                    <th>總分</th>
+                </tr>
+            </thead>
+            <tbody id="resultBody">
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    const fixedPlayers = ['皮皮', '芝依', '大哥', '母', '可芸', '樂樂', '小安', '傑克'];
+    let playersData = [];
+
+    window.onload = () => {
+        // 1. 建立玩家欄位
+        fixedPlayers.forEach((name, index) => {
+            addPlayer(name, index);
+        });
+
+        // 2. 嘗試從手機讀取上次的存檔進度
+        loadGameData();
+        
+        // 3. 更新下方計分板
+        updateResultBoard({});
+    };
+
+    function addPlayer(name, id) {
+        playersData.push({ id: id });
+        const list = document.getElementById('playerList');
+        
+        // 注意：這裡在 input 加入了 onchange="saveGameData()"，代表手動修改也會自動存檔
+        const rowHTML = `
+            <div class="player-row" id="row${id}">
+                <input type="checkbox" id="active${id}" class="active-toggle" checked onchange="togglePlayer(${id}); saveGameData();" title="是否參加本局">
+                <input type="text" id="name${id}" value="${name}" class="name-input" readonly>
+                <input type="number" id="score${id}" value="0" class="score-input" title="可手動修改現有積分" onchange="saveGameData(); updateResultBoard({});">
+                <input type="number" id="cards${id}" value="0" min="0" class="cards-input" placeholder="剩牌">
+            </div>
+        `;
+        list.insertAdjacentHTML('beforeend', rowHTML);
+    }
+
+    function togglePlayer(id) {
+        const isChecked = document.getElementById('active' + id).checked;
+        const cardsInput = document.getElementById('cards' + id);
+        const row = document.getElementById('row' + id);
+        
+        if (isChecked) {
+            cardsInput.disabled = false;
+            row.classList.remove('disabled');
+        } else {
+            cardsInput.disabled = true;
+            cardsInput.value = 0; 
+            row.classList.add('disabled');
+        }
+    }
+
+    // ★ 自動存檔功能 ★
+    function saveGameData() {
+        let saveArray = [];
+        playersData.forEach(p => {
+            saveArray.push({
+                id: p.id,
+                active: document.getElementById('active' + p.id).checked,
+                score: parseInt(document.getElementById('score' + p.id).value) || 0
+            });
+        });
+        // 存入手機瀏覽器的 Local Storage
+        localStorage.setItem('cardGameData', JSON.stringify(saveArray));
+    }
+
+    // ★ 讀取進度功能 ★
+    function loadGameData() {
+        let saved = localStorage.getItem('cardGameData');
+        if (saved) {
+            let saveArray = JSON.parse(saved);
+            saveArray.forEach(data => {
+                let activeCheckbox = document.getElementById('active' + data.id);
+                let scoreInput = document.getElementById('score' + data.id);
+                
+                if (activeCheckbox && scoreInput) {
+                    activeCheckbox.checked = data.active;
+                    scoreInput.value = data.score;
+                    togglePlayer(data.id); // 更新參加/未參加的視覺特效
+                }
+            });
+        }
+    }
+
+    function getPenaltyPoints(cards) {
+        if (cards >= 13) return cards * 4;
+        else if (cards >= 9 && cards <= 12) return cards * 2;
+        else return cards;
+    }
+
+    function calculateRound() {
+        let totalPenalty = 0;
+        let activePlayersCount = 0;
+        let roundCards = {};
+        let roundPenalties = {};
+
+        playersData.forEach(p => {
+            const isActive = document.getElementById('active' + p.id).checked;
+            if (isActive) {
+                let cards = parseInt(document.getElementById('cards' + p.id).value) || 0;
+                roundCards[p.id] = cards;
+                
+                let penalty = getPenaltyPoints(cards);
+                roundPenalties[p.id] = penalty;
+                
+                totalPenalty += penalty; 
+                activePlayersCount++;
+            }
+        });
+
+        if (activePlayersCount < 2) {
+            alert("至少需要兩位玩家參加才能計算分數！");
+            return;
+        }
+        if (totalPenalty === 0) {
+            alert("請至少輸入一位輸家的剩餘牌數！");
+            return;
+        }
+
+        let roundScores = {};
+
+        playersData.forEach(p => {
+            const isActive = document.getElementById('active' + p.id).checked;
+            if (isActive) {
+                let cards = roundCards[p.id];
+                
+                if (cards === 0) {
+                    roundScores[p.id] = totalPenalty; 
+                } else {
+                    roundScores[p.id] = -roundPenalties[p.id]; 
+                }
+
+                let currentScore = parseInt(document.getElementById('score' + p.id).value) || 0;
+                let newScore = currentScore + roundScores[p.id];
+                document.getElementById('score' + p.id).value = newScore;
+            }
+        });
+
+        updateResultBoard(roundScores);
+
+        playersData.forEach(p => {
+            const isActive = document.getElementById('active' + p.id).checked;
+            if (isActive) {
+                document.getElementById('cards' + p.id).value = 0;
+            }
+        });
+
+        // 結算完畢後，執行存檔
+        saveGameData();
+    }
+
+    function resetScores() {
+        if (confirm("確定要將全場的【總積分】與【剩牌】都歸零嗎？\n(歸零後原本的存檔也會被清除)")) {
+            playersData.forEach(p => {
+                document.getElementById('score' + p.id).value = 0;
+                if (!document.getElementById('cards' + p.id).disabled) {
+                    document.getElementById('cards' + p.id).value = 0;
+                }
+            });
+            updateResultBoard({});
+            
+            // 清空手機裡的存檔
+            localStorage.removeItem('cardGameData');
+        }
+    }
+
+    function updateResultBoard(roundScores) {
+        const resultBody = document.getElementById('resultBody');
+        resultBody.innerHTML = ''; 
+
+        playersData.forEach(p => {
+            let playerName = document.getElementById('name' + p.id).value;
+            let isActive = document.getElementById('active' + p.id).checked;
+            let currentScore = parseInt(document.getElementById('score' + p.id).value) || 0;
+            
+            let roundScoreStr = '-';
+            let roundClass = '';
+
+            if (isActive && roundScores[p.id] !== undefined) {
+                let s = roundScores[p.id];
+                roundScoreStr = s > 0 ? '+' + s : s;
+                roundClass = s > 0 ? 'positive' : (s < 0 ? 'negative' : '');
+            } else if (!isActive) {
+                playerName += ' (休)';
+                roundClass = 'inactive-text';
+            }
+            
+            let totalClass = currentScore > 0 ? 'positive' : (currentScore < 0 ? 'negative' : '');
+            
+            resultBody.innerHTML += `
+                <tr>
+                    <td class="${!isActive ? 'inactive-text' : ''}">${playerName}</td>
+                    <td class="${roundClass}">${roundScoreStr}</td>
+                    <td class="${totalClass}">${currentScore}</td>
+                </tr>
+            `;
+        });
+    }
+</script>
+
+</body>
+</html>
