@@ -189,15 +189,10 @@
     let playersData = [];
 
     window.onload = () => {
-        // 1. 建立玩家欄位
         fixedPlayers.forEach((name, index) => {
             addPlayer(name, index);
         });
-
-        // 2. 嘗試從手機讀取上次的存檔進度
         loadGameData();
-        
-        // 3. 更新下方計分板
         updateResultBoard({});
     };
 
@@ -205,13 +200,13 @@
         playersData.push({ id: id });
         const list = document.getElementById('playerList');
         
-        // 注意：這裡在 input 加入了 onchange="saveGameData()"，代表手動修改也會自動存檔
+        // 變更點：移除了 value="0"，改用 placeholder="0"，讓格子預設是空的
         const rowHTML = `
             <div class="player-row" id="row${id}">
                 <input type="checkbox" id="active${id}" class="active-toggle" checked onchange="togglePlayer(${id}); saveGameData();" title="是否參加本局">
                 <input type="text" id="name${id}" value="${name}" class="name-input" readonly>
-                <input type="number" id="score${id}" value="0" class="score-input" title="可手動修改現有積分" onchange="saveGameData(); updateResultBoard({});">
-                <input type="number" id="cards${id}" value="0" min="0" class="cards-input" placeholder="剩牌">
+                <input type="number" id="score${id}" value="" placeholder="0" class="score-input" title="可手動修改現有積分" onchange="saveGameData(); updateResultBoard({});">
+                <input type="number" id="cards${id}" value="" placeholder="0" min="0" class="cards-input">
             </div>
         `;
         list.insertAdjacentHTML('beforeend', rowHTML);
@@ -227,12 +222,11 @@
             row.classList.remove('disabled');
         } else {
             cardsInput.disabled = true;
-            cardsInput.value = 0; 
+            cardsInput.value = ''; // 變更點：取消勾選時清空，而不是填0
             row.classList.add('disabled');
         }
     }
 
-    // ★ 自動存檔功能 ★
     function saveGameData() {
         let saveArray = [];
         playersData.forEach(p => {
@@ -242,11 +236,9 @@
                 score: parseInt(document.getElementById('score' + p.id).value) || 0
             });
         });
-        // 存入手機瀏覽器的 Local Storage
         localStorage.setItem('cardGameData', JSON.stringify(saveArray));
     }
 
-    // ★ 讀取進度功能 ★
     function loadGameData() {
         let saved = localStorage.getItem('cardGameData');
         if (saved) {
@@ -257,8 +249,9 @@
                 
                 if (activeCheckbox && scoreInput) {
                     activeCheckbox.checked = data.active;
-                    scoreInput.value = data.score;
-                    togglePlayer(data.id); // 更新參加/未參加的視覺特效
+                    // 變更點：如果積分是 0 就顯示空白，方便手機點擊
+                    scoreInput.value = data.score === 0 ? '' : data.score;
+                    togglePlayer(data.id); 
                 }
             });
         }
@@ -279,6 +272,7 @@
         playersData.forEach(p => {
             const isActive = document.getElementById('active' + p.id).checked;
             if (isActive) {
+                // 如果是空的，parseInt 會回傳 NaN，加上 || 0 就會自動變成 0
                 let cards = parseInt(document.getElementById('cards' + p.id).value) || 0;
                 roundCards[p.id] = cards;
                 
@@ -314,7 +308,9 @@
 
                 let currentScore = parseInt(document.getElementById('score' + p.id).value) || 0;
                 let newScore = currentScore + roundScores[p.id];
-                document.getElementById('score' + p.id).value = newScore;
+                
+                // 變更點：計算完如果剛好是 0，一樣顯示空白，方便後續修改
+                document.getElementById('score' + p.id).value = newScore === 0 ? '' : newScore;
             }
         });
 
@@ -323,25 +319,24 @@
         playersData.forEach(p => {
             const isActive = document.getElementById('active' + p.id).checked;
             if (isActive) {
-                document.getElementById('cards' + p.id).value = 0;
+                // 變更點：每次計算完把牌數清空，而不是填0
+                document.getElementById('cards' + p.id).value = '';
             }
         });
 
-        // 結算完畢後，執行存檔
         saveGameData();
     }
 
     function resetScores() {
         if (confirm("確定要將全場的【總積分】與【剩牌】都歸零嗎？\n(歸零後原本的存檔也會被清除)")) {
             playersData.forEach(p => {
-                document.getElementById('score' + p.id).value = 0;
+                // 變更點：歸零時直接清空格子
+                document.getElementById('score' + p.id).value = '';
                 if (!document.getElementById('cards' + p.id).disabled) {
-                    document.getElementById('cards' + p.id).value = 0;
+                    document.getElementById('cards' + p.id).value = '';
                 }
             });
             updateResultBoard({});
-            
-            // 清空手機裡的存檔
             localStorage.removeItem('cardGameData');
         }
     }
