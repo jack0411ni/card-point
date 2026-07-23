@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>卡牌計分器 (自動存檔版)</title>
+    <title>卡牌計分器 (防護升級版)</title>
     <style>
         body {
             font-family: "Microsoft JhengHei", Arial, sans-serif;
@@ -103,23 +103,39 @@
         }
         
         /* 按鈕區塊 */
-        .btn-group {
-            display: flex;
-            gap: 10px;
+        .action-area {
             margin-top: 20px;
         }
-        button {
-            flex: 1;
-            padding: 12px;
+        .calc-btn {
+            width: 100%;
+            padding: 15px;
+            background-color: #4CAF50;
             color: white;
             border: none;
             border-radius: 5px;
-            font-size: 16px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+        .calc-btn:hover { background-color: #45a049; }
+        
+        .sub-btn-group {
+            display: flex;
+            gap: 10px;
+        }
+        .sub-btn-group button {
+            flex: 1;
+            padding: 10px;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 15px;
             font-weight: bold;
             cursor: pointer;
         }
-        .calc-btn { background-color: #4CAF50; }
-        .calc-btn:hover { background-color: #45a049; }
+        .undo-btn { background-color: #ff9800; }
+        .undo-btn:hover { background-color: #e68a00; }
         .reset-btn { background-color: #f44336; }
         .reset-btn:hover { background-color: #da190b; }
         
@@ -163,9 +179,14 @@
 
     <div id="playerList"></div>
 
-    <div class="btn-group">
+    <div class="action-area">
+        <!-- 主要計算按鈕放大獨立一行 -->
         <button class="calc-btn" onclick="calculateRound()">計算本輪</button>
-        <button class="reset-btn" onclick="resetScores()">全場歸零</button>
+        <!-- 功能按鈕放下面 -->
+        <div class="sub-btn-group">
+            <button class="undo-btn" onclick="undoRound()">↩ 復原上步</button>
+            <button class="reset-btn" onclick="resetScores()">全場歸零</button>
+        </div>
     </div>
 
     <div class="result-box">
@@ -187,6 +208,7 @@
 <script>
     const fixedPlayers = ['皮皮', '芝依', '大哥', '母', '可芸', '樂樂', '小安', '傑克'];
     let playersData = [];
+    let historyData = null; // 用來儲存上一步狀態
 
     window.onload = () => {
         fixedPlayers.forEach((name, index) => {
@@ -200,7 +222,6 @@
         playersData.push({ id: id });
         const list = document.getElementById('playerList');
         
-        // 變更點：移除了 value="0"，改用 placeholder="0"，讓格子預設是空的
         const rowHTML = `
             <div class="player-row" id="row${id}">
                 <input type="checkbox" id="active${id}" class="active-toggle" checked onchange="togglePlayer(${id}); saveGameData();" title="是否參加本局">
@@ -222,7 +243,7 @@
             row.classList.remove('disabled');
         } else {
             cardsInput.disabled = true;
-            cardsInput.value = ''; // 變更點：取消勾選時清空，而不是填0
+            cardsInput.value = ''; 
             row.classList.add('disabled');
         }
     }
@@ -249,11 +270,57 @@
                 
                 if (activeCheckbox && scoreInput) {
                     activeCheckbox.checked = data.active;
-                    // 變更點：如果積分是 0 就顯示空白，方便手機點擊
                     scoreInput.value = data.score === 0 ? '' : data.score;
                     togglePlayer(data.id); 
                 }
             });
+        }
+        
+        // 讀取歷史進度
+        let savedHistory = localStorage.getItem('cardGameHistory');
+        if (savedHistory) {
+            historyData = JSON.parse(savedHistory);
+        }
+    }
+
+    // ★ 儲存上一步狀態 ★
+    function backupHistory() {
+        historyData = [];
+        playersData.forEach(p => {
+            historyData.push({
+                id: p.id,
+                active: document.getElementById('active' + p.id).checked,
+                score: parseInt(document.getElementById('score' + p.id).value) || 0
+            });
+        });
+        localStorage.setItem('cardGameHistory', JSON.stringify(historyData));
+    }
+
+    // ★ 復原上一步 ★
+    function undoRound() {
+        if (!historyData || historyData.length === 0) {
+            alert("⚠️ 目前沒有上一步的分數可以復原！");
+            return;
+        }
+        
+        if (confirm("確定要取消上一次的計算，復原回上一步的分數嗎？")) {
+            historyData.forEach(data => {
+                let activeCheckbox = document.getElementById('active' + data.id);
+                let scoreInput = document.getElementById('score' + data.id);
+                if (activeCheckbox && scoreInput) {
+                    activeCheckbox.checked = data.active;
+                    scoreInput.value = data.score === 0 ? '' : data.score;
+                    togglePlayer(data.id);
+                }
+            });
+            
+            // 順便把大家手上的剩牌清空
+            playersData.forEach(p => {
+                document.getElementById('cards' + p.id).value = '';
+            });
+
+            saveGameData();
+            updateResultBoard({});
         }
     }
 
@@ -272,7 +339,6 @@
         playersData.forEach(p => {
             const isActive = document.getElementById('active' + p.id).checked;
             if (isActive) {
-                // 如果是空的，parseInt 會回傳 NaN，加上 || 0 就會自動變成 0
                 let cards = parseInt(document.getElementById('cards' + p.id).value) || 0;
                 roundCards[p.id] = cards;
                 
@@ -284,6 +350,7 @@
             }
         });
 
+        // 檢查防呆
         if (activePlayersCount < 2) {
             alert("至少需要兩位玩家參加才能計算分數！");
             return;
@@ -292,6 +359,9 @@
             alert("請至少輸入一位輸家的剩餘牌數！");
             return;
         }
+
+        // 確認沒問題後，備份目前的狀態當作「上一步」
+        backupHistory();
 
         let roundScores = {};
 
@@ -309,7 +379,6 @@
                 let currentScore = parseInt(document.getElementById('score' + p.id).value) || 0;
                 let newScore = currentScore + roundScores[p.id];
                 
-                // 變更點：計算完如果剛好是 0，一樣顯示空白，方便後續修改
                 document.getElementById('score' + p.id).value = newScore === 0 ? '' : newScore;
             }
         });
@@ -319,7 +388,6 @@
         playersData.forEach(p => {
             const isActive = document.getElementById('active' + p.id).checked;
             if (isActive) {
-                // 變更點：每次計算完把牌數清空，而不是填0
                 document.getElementById('cards' + p.id).value = '';
             }
         });
@@ -327,17 +395,28 @@
         saveGameData();
     }
 
+    // ★ 防誤觸全場歸零 ★
     function resetScores() {
-        if (confirm("確定要將全場的【總積分】與【剩牌】都歸零嗎？\n(歸零後原本的存檔也會被清除)")) {
+        let answer = prompt("⚠️ 警告：這將會清空所有人的分數！\n\n如果您確定要歸零，請在下方輸入數字「0」並按確定：");
+        
+        if (answer === "0") {
             playersData.forEach(p => {
-                // 變更點：歸零時直接清空格子
                 document.getElementById('score' + p.id).value = '';
-                if (!document.getElementById('cards' + p.id).disabled) {
+                if (!document.getElementById('active' + p.id).disabled) {
                     document.getElementById('cards' + p.id).value = '';
                 }
             });
             updateResultBoard({});
+            
+            // 清除本機所有存檔與歷史紀錄
             localStorage.removeItem('cardGameData');
+            localStorage.removeItem('cardGameHistory');
+            historyData = null;
+            
+            alert("全場分數已歸零！");
+        } else if (answer !== null) {
+            // 輸入錯數字，但不是按取消
+            alert("❌ 輸入錯誤，已取消歸零操作。");
         }
     }
 
