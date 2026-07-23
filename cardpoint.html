@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>卡牌計分器 (防護升級版)</title>
+    <title>卡牌計分器 (雙模式切換版)</title>
     <style>
         body {
             font-family: "Microsoft JhengHei", Arial, sans-serif;
@@ -30,12 +30,29 @@
             margin-top: 0;
             margin-bottom: 5px;
         }
+        
+        /* 模式切換選單 */
+        .mode-selector {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .mode-selector select {
+            padding: 8px 15px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 5px;
+            border: 2px solid #333;
+            background-color: #fff;
+            cursor: pointer;
+        }
+        
         .rule-hint {
             text-align: center;
             color: #d32f2f;
             font-size: 13px;
             font-weight: bold;
             margin-bottom: 15px;
+            min-height: 20px; /* 預留高度避免切換時跳動 */
         }
         
         /* 列表標題列 */
@@ -59,9 +76,7 @@
             gap: 8px;
             transition: opacity 0.3s;
         }
-        .player-row.disabled {
-            opacity: 0.5;
-        }
+        .player-row.disabled { opacity: 0.5; }
         .active-toggle {
             width: 20px;
             height: 20px;
@@ -89,7 +104,7 @@
             border-radius: 4px;
             font-weight: bold;
         }
-        .cards-input {
+        .round-input {
             width: 70px;
             padding: 8px 5px;
             font-size: 16px;
@@ -97,15 +112,13 @@
             border: 1px solid #ccc;
             border-radius: 4px;
         }
-        .cards-input:disabled {
+        .round-input:disabled {
             background-color: #e9ecef;
             cursor: not-allowed;
         }
         
         /* 按鈕區塊 */
-        .action-area {
-            margin-top: 20px;
-        }
+        .action-area { margin-top: 20px; }
         .calc-btn {
             width: 100%;
             padding: 15px;
@@ -168,21 +181,29 @@
 
 <div class="container">
     <h2>🏆 專屬卡牌積分台</h2>
-    <div class="rule-hint">💡 規則：剩9-12張(x2) / 剩13張以上(x4) <br> (系統會自動儲存進度)</div>
+    
+    <div class="mode-selector">
+        <select id="gameMode" onchange="switchMode()">
+            <option value="big2">模式：大老二 (剩牌)</option>
+            <option value="13cards">模式：十三張 (墩數)</option>
+        </select>
+    </div>
+
+    <div class="rule-hint" id="ruleHint">
+        💡 規則：剩9-12張(x2) / 剩13張以上(x4)
+    </div>
     
     <div class="list-header">
         <span style="width: 25px;">參加</span>
         <span style="flex: 1; text-align: left;">玩家</span>
         <span style="width: 80px;">總積分</span>
-        <span style="width: 80px;">本輪剩牌</span>
+        <span style="width: 80px;" id="roundInputTitle">本輪剩牌</span>
     </div>
 
     <div id="playerList"></div>
 
     <div class="action-area">
-        <!-- 主要計算按鈕放大獨立一行 -->
         <button class="calc-btn" onclick="calculateRound()">計算本輪</button>
-        <!-- 功能按鈕放下面 -->
         <div class="sub-btn-group">
             <button class="undo-btn" onclick="undoRound()">↩ 復原上步</button>
             <button class="reset-btn" onclick="resetScores()">全場歸零</button>
@@ -195,7 +216,7 @@
             <thead>
                 <tr>
                     <th>玩家</th>
-                    <th>本輪加扣分</th>
+                    <th>本輪增減</th>
                     <th>總分</th>
                 </tr>
             </thead>
@@ -208,7 +229,7 @@
 <script>
     const fixedPlayers = ['皮皮', '芝依', '大哥', '母', '可芸', '樂樂', '小安', '傑克'];
     let playersData = [];
-    let historyData = null; // 用來儲存上一步狀態
+    let historyData = null; 
 
     window.onload = () => {
         fixedPlayers.forEach((name, index) => {
@@ -216,6 +237,7 @@
         });
         loadGameData();
         updateResultBoard({});
+        switchMode(); // 初始化文字顯示
     };
 
     function addPlayer(name, id) {
@@ -227,23 +249,45 @@
                 <input type="checkbox" id="active${id}" class="active-toggle" checked onchange="togglePlayer(${id}); saveGameData();" title="是否參加本局">
                 <input type="text" id="name${id}" value="${name}" class="name-input" readonly>
                 <input type="number" id="score${id}" value="" placeholder="0" class="score-input" title="可手動修改現有積分" onchange="saveGameData(); updateResultBoard({});">
-                <input type="number" id="cards${id}" value="" placeholder="0" min="0" class="cards-input">
+                <input type="number" id="roundInput${id}" value="" placeholder="0" class="round-input">
             </div>
         `;
         list.insertAdjacentHTML('beforeend', rowHTML);
     }
 
+    // ★ 模式切換功能 ★
+    function switchMode() {
+        const mode = document.getElementById('gameMode').value;
+        const hint = document.getElementById('ruleHint');
+        const inputTitle = document.getElementById('roundInputTitle');
+        
+        if (mode === 'big2') {
+            hint.innerHTML = '💡 規則：剩9-12張(x2) / 剩13張以上(x4)';
+            inputTitle.innerText = '本輪剩牌';
+            // 大老二只能輸入正數 (因為是剩牌數量)
+            playersData.forEach(p => document.getElementById('roundInput' + p.id).min = "0");
+        } else {
+            hint.innerHTML = '💡 規則：手動輸入十三張結算分數 (+/-)<br><span style="color:#666; font-size:11px;">※ 所有參加者的加扣分總和必須為 0</span>';
+            inputTitle.innerText = '本輪得分';
+            // 十三張可以輸入正負數
+            playersData.forEach(p => document.getElementById('roundInput' + p.id).removeAttribute('min'));
+        }
+        
+        // 儲存模式選擇
+        localStorage.setItem('cardGameMode', mode);
+    }
+
     function togglePlayer(id) {
         const isChecked = document.getElementById('active' + id).checked;
-        const cardsInput = document.getElementById('cards' + id);
+        const roundInput = document.getElementById('roundInput' + id);
         const row = document.getElementById('row' + id);
         
         if (isChecked) {
-            cardsInput.disabled = false;
+            roundInput.disabled = false;
             row.classList.remove('disabled');
         } else {
-            cardsInput.disabled = true;
-            cardsInput.value = ''; 
+            roundInput.disabled = true;
+            roundInput.value = ''; 
             row.classList.add('disabled');
         }
     }
@@ -261,6 +305,12 @@
     }
 
     function loadGameData() {
+        // 讀取模式
+        let savedMode = localStorage.getItem('cardGameMode');
+        if (savedMode) {
+            document.getElementById('gameMode').value = savedMode;
+        }
+
         let saved = localStorage.getItem('cardGameData');
         if (saved) {
             let saveArray = JSON.parse(saved);
@@ -276,14 +326,12 @@
             });
         }
         
-        // 讀取歷史進度
         let savedHistory = localStorage.getItem('cardGameHistory');
         if (savedHistory) {
             historyData = JSON.parse(savedHistory);
         }
     }
 
-    // ★ 儲存上一步狀態 ★
     function backupHistory() {
         historyData = [];
         playersData.forEach(p => {
@@ -296,7 +344,6 @@
         localStorage.setItem('cardGameHistory', JSON.stringify(historyData));
     }
 
-    // ★ 復原上一步 ★
     function undoRound() {
         if (!historyData || historyData.length === 0) {
             alert("⚠️ 目前沒有上一步的分數可以復原！");
@@ -314,9 +361,8 @@
                 }
             });
             
-            // 順便把大家手上的剩牌清空
             playersData.forEach(p => {
-                document.getElementById('cards' + p.id).value = '';
+                document.getElementById('roundInput' + p.id).value = '';
             });
 
             saveGameData();
@@ -330,72 +376,99 @@
         else return cards;
     }
 
+    // ★ 核心計算邏輯分流 ★
     function calculateRound() {
-        let totalPenalty = 0;
+        const mode = document.getElementById('gameMode').value;
         let activePlayersCount = 0;
-        let roundCards = {};
-        let roundPenalties = {};
-
+        let roundInputs = {};
+        
+        // 抓取所有有參加的玩家輸入值
         playersData.forEach(p => {
-            const isActive = document.getElementById('active' + p.id).checked;
-            if (isActive) {
-                let cards = parseInt(document.getElementById('cards' + p.id).value) || 0;
-                roundCards[p.id] = cards;
-                
-                let penalty = getPenaltyPoints(cards);
-                roundPenalties[p.id] = penalty;
-                
-                totalPenalty += penalty; 
+            if (document.getElementById('active' + p.id).checked) {
+                roundInputs[p.id] = parseInt(document.getElementById('roundInput' + p.id).value) || 0;
                 activePlayersCount++;
             }
         });
 
-        // 檢查防呆
         if (activePlayersCount < 2) {
             alert("至少需要兩位玩家參加才能計算分數！");
             return;
         }
-        if (totalPenalty === 0) {
-            alert("請至少輸入一位輸家的剩餘牌數！");
-            return;
-        }
-
-        // 確認沒問題後，備份目前的狀態當作「上一步」
-        backupHistory();
 
         let roundScores = {};
 
+        // -----------------------------
+        // 邏輯 A：大老二模式
+        // -----------------------------
+        if (mode === 'big2') {
+            let totalPenalty = 0;
+            let roundPenalties = {};
+
+            for (let id in roundInputs) {
+                let cards = roundInputs[id];
+                let penalty = getPenaltyPoints(cards);
+                roundPenalties[id] = penalty;
+                totalPenalty += penalty;
+            }
+
+            if (totalPenalty === 0) {
+                alert("請至少輸入一位輸家的剩餘牌數！");
+                return;
+            }
+
+            for (let id in roundInputs) {
+                if (roundInputs[id] === 0) {
+                    roundScores[id] = totalPenalty; 
+                } else {
+                    roundScores[id] = -roundPenalties[id]; 
+                }
+            }
+        } 
+        // -----------------------------
+        // 邏輯 B：十三張模式 (暫時為手動加總)
+        // -----------------------------
+        else if (mode === '13cards') {
+            let sum = 0;
+            let hasInput = false;
+
+            for (let id in roundInputs) {
+                if (roundInputs[id] !== 0) hasInput = true;
+                sum += roundInputs[id];
+                roundScores[id] = roundInputs[id];
+            }
+
+            if (!hasInput) {
+                alert("請輸入玩家的加扣分！");
+                return;
+            }
+
+            // 十三張防呆：總和必須為 0
+            if (sum !== 0) {
+                alert(`計算錯誤！目前輸入的總和為 ${sum}。\n\n十三張的贏分與輸分加總必須剛好等於 0，請檢查是否有人分數打錯。`);
+                return;
+            }
+        }
+
+        // 備份目前的狀態當作「上一步」
+        backupHistory();
+
+        // 結算並更新分數
         playersData.forEach(p => {
             const isActive = document.getElementById('active' + p.id).checked;
             if (isActive) {
-                let cards = roundCards[p.id];
-                
-                if (cards === 0) {
-                    roundScores[p.id] = totalPenalty; 
-                } else {
-                    roundScores[p.id] = -roundPenalties[p.id]; 
-                }
-
                 let currentScore = parseInt(document.getElementById('score' + p.id).value) || 0;
                 let newScore = currentScore + roundScores[p.id];
-                
                 document.getElementById('score' + p.id).value = newScore === 0 ? '' : newScore;
+                
+                // 清空輸入框
+                document.getElementById('roundInput' + p.id).value = '';
             }
         });
 
         updateResultBoard(roundScores);
-
-        playersData.forEach(p => {
-            const isActive = document.getElementById('active' + p.id).checked;
-            if (isActive) {
-                document.getElementById('cards' + p.id).value = '';
-            }
-        });
-
         saveGameData();
     }
 
-    // ★ 防誤觸全場歸零 ★
     function resetScores() {
         let answer = prompt("⚠️ 警告：這將會清空所有人的分數！\n\n如果您確定要歸零，請在下方輸入數字「0」並按確定：");
         
@@ -403,19 +476,17 @@
             playersData.forEach(p => {
                 document.getElementById('score' + p.id).value = '';
                 if (!document.getElementById('active' + p.id).disabled) {
-                    document.getElementById('cards' + p.id).value = '';
+                    document.getElementById('roundInput' + p.id).value = '';
                 }
             });
             updateResultBoard({});
             
-            // 清除本機所有存檔與歷史紀錄
             localStorage.removeItem('cardGameData');
             localStorage.removeItem('cardGameHistory');
             historyData = null;
             
             alert("全場分數已歸零！");
         } else if (answer !== null) {
-            // 輸入錯數字，但不是按取消
             alert("❌ 輸入錯誤，已取消歸零操作。");
         }
     }
