@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>卡牌計分器 (雙模式獨立積分版)</title>
+    <title>卡牌計分器 (帳目檢查版)</title>
     <style>
         body {
             font-family: "Microsoft JhengHei", Arial, sans-serif;
@@ -110,7 +110,7 @@
         }
         .score-13cards {
             border: 1px solid #ce93d8; 
-            background-color: #f3e5f5; /* 十三張用淺紫色區分 */
+            background-color: #f3e5f5;
         }
         
         /* 大老二輸入框 */
@@ -128,7 +128,7 @@
             cursor: not-allowed;
         }
 
-        /* 十三張輸入框 (贏/輸) */
+        /* 十三張輸入框 */
         .thirteen-inputs {
             width: 90px;
             display: none; 
@@ -179,20 +179,22 @@
         
         .sub-btn-group {
             display: flex;
-            gap: 10px;
+            gap: 8px;
         }
         .sub-btn-group button {
             flex: 1;
-            padding: 10px;
+            padding: 10px 5px;
             color: white;
             border: none;
             border-radius: 5px;
-            font-size: 15px;
+            font-size: 14px;
             font-weight: bold;
             cursor: pointer;
         }
         .undo-btn { background-color: #ff9800; }
         .undo-btn:hover { background-color: #e68a00; }
+        .check-btn { background-color: #2196F3; }
+        .check-btn:hover { background-color: #1976D2; }
         .reset-btn { background-color: #f44336; }
         .reset-btn:hover { background-color: #da190b; }
         
@@ -247,8 +249,9 @@
     <div class="action-area">
         <button class="calc-btn" onclick="calculateRound()">計算本輪</button>
         <div class="sub-btn-group">
-            <button class="undo-btn" onclick="undoRound()">↩ 復原上步</button>
-            <button class="reset-btn" onclick="resetScores()">全場歸零</button>
+            <button class="undo-btn" onclick="undoRound()">↩ 復原</button>
+            <button class="check-btn" onclick="checkTotalScores()">⚖️ 對帳</button>
+            <button class="reset-btn" onclick="resetScores()">🗑️ 歸零</button>
         </div>
     </div>
 
@@ -291,14 +294,11 @@
                 <input type="checkbox" id="active${id}" class="active-toggle" checked onchange="togglePlayer(${id}); saveGameData();" title="是否參加本局">
                 <input type="text" id="name${id}" value="${name}" class="name-input" readonly>
                 
-                <!-- 獨立的兩個積分欄位 -->
                 <input type="number" id="scoreBig2_${id}" value="" placeholder="0" class="score-input score-big2" title="大老二積分" onchange="saveGameData(); updateResultBoard({});">
                 <input type="number" id="score13Cards_${id}" value="" placeholder="0" class="score-input score-13cards" title="十三張積分" style="display:none;" onchange="saveGameData(); updateResultBoard({});">
                 
-                <!-- 大老二輸入框 -->
                 <input type="number" id="cardsInput${id}" value="" placeholder="0" min="0" class="cards-input">
                 
-                <!-- 十三張輸入框 -->
                 <div id="thirteenInputs${id}" class="thirteen-inputs">
                     <input type="number" id="winInput${id}" placeholder="贏" class="win-input" min="0">
                     <input type="number" id="loseInput${id}" placeholder="輸" class="lose-input" min="0">
@@ -308,7 +308,6 @@
         list.insertAdjacentHTML('beforeend', rowHTML);
     }
 
-    // ★ 模式切換與介面變更 (自動隱藏另一邊的積分) ★
     function switchMode() {
         const mode = document.getElementById('gameMode').value;
         const hint = document.getElementById('ruleHint');
@@ -335,7 +334,7 @@
         }
         
         localStorage.setItem('cardGameMode', mode);
-        updateResultBoard({}); // 切換模式時重新渲染戰況表
+        updateResultBoard({}); 
     }
 
     function togglePlayer(id) {
@@ -362,7 +361,6 @@
         }
     }
 
-    // ★ 存取兩個不同的積分 ★
     function saveGameData() {
         let saveArray = [];
         playersData.forEach(p => {
@@ -373,7 +371,7 @@
                 score13Cards: parseInt(document.getElementById('score13Cards_' + p.id).value) || 0
             });
         });
-        localStorage.setItem('cardGameData_v2', JSON.stringify(saveArray)); // 改名避免跟舊版衝突
+        localStorage.setItem('cardGameData_v2', JSON.stringify(saveArray));
     }
 
     function loadGameData() {
@@ -446,6 +444,27 @@
 
             saveGameData();
             updateResultBoard({});
+        }
+    }
+
+    // ★ 檢查總帳目是否平衡 ★
+    function checkTotalScores() {
+        const mode = document.getElementById('gameMode').value;
+        const modeName = mode === 'big2' ? '大老二' : '十三張';
+        let totalSum = 0;
+
+        playersData.forEach(p => {
+            let currentScoreId = mode === 'big2' ? 'scoreBig2_' + p.id : 'score13Cards_' + p.id;
+            let score = parseInt(document.getElementById(currentScoreId).value) || 0;
+            totalSum += score;
+        });
+
+        if (totalSum === 0) {
+            alert(`✅ 【${modeName}】帳目正確！\n\n目前全場「總積分」加總剛好為 0。`);
+        } else if (totalSum > 0) {
+            alert(`❌ 【${modeName}】帳目有誤！\n\n目前全場加總多出了「+${totalSum}」分。\n(贏的分數比輸的多，請檢查是誰少扣分或多加分了！)`);
+        } else {
+            alert(`❌ 【${modeName}】帳目有誤！\n\n目前全場加總短少了「${totalSum}」分。\n(輸的分數比贏的多，請檢查是誰多扣分或少加分了！)`);
         }
     }
 
@@ -532,7 +551,6 @@
 
         backupHistory();
 
-        // 結算並更新「對應模式」的總分
         playersData.forEach(p => {
             if (document.getElementById('active' + p.id).checked) {
                 let currentScoreId = mode === 'big2' ? 'scoreBig2_' + p.id : 'score13Cards_' + p.id;
@@ -541,7 +559,6 @@
                 
                 document.getElementById(currentScoreId).value = newScore === 0 ? '' : newScore;
                 
-                // 計算完畢自動清空輸入框
                 document.getElementById('cardsInput' + p.id).value = '';
                 document.getElementById('winInput' + p.id).value = '';
                 document.getElementById('loseInput' + p.id).value = '';
@@ -586,7 +603,6 @@
             let playerName = document.getElementById('name' + p.id).value;
             let isActive = document.getElementById('active' + p.id).checked;
             
-            // 抓取當前模式的分數來顯示
             let currentScoreId = mode === 'big2' ? 'scoreBig2_' + p.id : 'score13Cards_' + p.id;
             let currentScore = parseInt(document.getElementById(currentScoreId).value) || 0;
             
