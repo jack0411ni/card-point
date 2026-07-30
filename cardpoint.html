@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>卡牌計分器 (帳目檢查版)</title>
+    <title>卡牌計分器 (自動倍率判斷版)</title>
     <style>
         body {
             font-family: "Microsoft JhengHei", Arial, sans-serif;
@@ -52,7 +52,7 @@
             font-size: 13px;
             font-weight: bold;
             margin-bottom: 15px;
-            min-height: 35px;
+            min-height: 45px;
         }
         
         /* 列表標題列 */
@@ -314,7 +314,7 @@
         const inputTitle = document.getElementById('roundInputTitle');
         
         if (mode === 'big2') {
-            hint.innerHTML = '💡 大老二規則：剩9-12張(x2) / 剩13張以上(x4)';
+            hint.innerHTML = '💡 大老二規則：<br><span style="color:#666; font-size:12px;">(一般) 剩9-12張x2 / 13張以上x4<br>(三人局) 剩13-16張x2 / 17張以上x4</span>';
             inputTitle.innerHTML = '本輪剩牌';
             playersData.forEach(p => {
                 document.getElementById('scoreBig2_' + p.id).style.display = 'inline-block';
@@ -447,7 +447,6 @@
         }
     }
 
-    // ★ 檢查總帳目是否平衡 ★
     function checkTotalScores() {
         const mode = document.getElementById('gameMode').value;
         const modeName = mode === 'big2' ? '大老二' : '十三張';
@@ -468,16 +467,37 @@
         }
     }
 
-    function getPenaltyPoints(cards) {
-        if (cards >= 13) return cards * 4;
-        else if (cards >= 9 && cards <= 12) return cards * 2;
-        else return cards;
+    // ★ 倍率判斷加入了 activePlayersCount 人數判斷 ★
+    function getPenaltyPoints(cards, activeCount) {
+        if (activeCount === 3) {
+            // 三人局規則
+            if (cards >= 17) return cards * 4;
+            else if (cards >= 13 && cards <= 16) return cards * 2;
+            else return cards;
+        } else {
+            // 四人局或以上的規則
+            if (cards >= 13) return cards * 4;
+            else if (cards >= 9 && cards <= 12) return cards * 2;
+            else return cards;
+        }
     }
 
     function calculateRound() {
         const mode = document.getElementById('gameMode').value;
         let activePlayersCount = 0;
         let roundScores = {}; 
+        
+        // 先計算當前「有打勾」的參加人數
+        playersData.forEach(p => {
+            if (document.getElementById('active' + p.id).checked) {
+                activePlayersCount++;
+            }
+        });
+
+        if (activePlayersCount < 2) {
+            alert("至少需要兩位玩家參加才能計算！");
+            return;
+        }
         
         if (mode === 'big2') {
             let totalPenalty = 0;
@@ -489,18 +509,14 @@
                     let cards = parseInt(document.getElementById('cardsInput' + p.id).value) || 0;
                     roundCards[p.id] = cards;
                     
-                    let penalty = getPenaltyPoints(cards);
+                    // 傳入人數進行倍率判斷
+                    let penalty = getPenaltyPoints(cards, activePlayersCount);
                     roundPenalties[p.id] = penalty;
                     
                     totalPenalty += penalty;
-                    activePlayersCount++;
                 }
             });
 
-            if (activePlayersCount < 2) {
-                alert("至少需要兩位玩家參加才能計算！");
-                return;
-            }
             if (totalPenalty === 0) {
                 alert("請至少輸入一位輸家的剩餘牌數！");
                 return;
@@ -530,14 +546,9 @@
                     totalLose += lose;
                     
                     roundScores[p.id] = win - lose; 
-                    activePlayersCount++;
                 }
             });
 
-            if (activePlayersCount < 2) {
-                alert("至少需要兩位玩家參加才能計算！");
-                return;
-            }
             if (!hasInput) {
                 alert("請填寫玩家的贏分或輸分！");
                 return;
