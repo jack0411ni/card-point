@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>終極桌遊計分台 (麻將點數直覺版)</title>
+    <title>終極桌遊計分台 (東專屬特權版)</title>
     <style>
         body {
             font-family: "Microsoft JhengHei", Arial, sans-serif;
@@ -315,13 +315,9 @@
                 <input type="number" id="score13Cards_${id}" value="" placeholder="0" class="score-input score-13cards" title="十三張積分" style="display:none;" onchange="saveGameData(); updateResultBoard({});">
                 <input type="number" id="scoreMahjong_${id}" value="" placeholder="0" class="score-input score-mahjong" title="麻將積分" style="display:none;" onchange="saveGameData(); updateResultBoard({});">
                 
-                <!-- 大老二輸入框 (剩牌) -->
                 <input type="number" id="cardsInput${id}" value="" placeholder="0" min="0" class="cards-input">
-                
-                <!-- 麻將輸入框 (剩餘點數) -->
                 <input type="number" id="mahjongPointsInput${id}" value="" placeholder="0" min="0" class="mahjong-points-input" style="display:none;">
                 
-                <!-- 十三張輸入框 (贏/輸) -->
                 <div id="winloseInputs${id}" class="winlose-inputs">
                     <input type="number" id="winInput${id}" placeholder="贏" class="win-input" min="0">
                     <input type="number" id="loseInput${id}" placeholder="輸" class="lose-input" min="0">
@@ -392,7 +388,7 @@
                 document.getElementById('winloseInputs' + p.id).style.display = 'flex';
                 
             } else if (mode === 'mahjong') {
-                hint.innerHTML = '💡 麻將規則：輸入數完後的【剩餘點數】<br><span style="color:#666; font-size:11px;">(底本200點，(點數-200)×10，全場總點數必須正確)</span>';
+                hint.innerHTML = '💡 麻將規則：輸入數完後的【剩餘點數】<br><span style="color:#666; font-size:11px;">(東為特權無底本，其餘底本200點，點數不符會自動警告)</span>';
                 inputTitle.innerHTML = '剩餘點數';
                 document.getElementById('scoreMahjong_' + p.id).style.display = 'inline-block';
                 document.getElementById('mahjongPointsInput' + p.id).style.display = 'block';
@@ -591,9 +587,6 @@
             return;
         }
         
-        // -----------------------------
-        // 邏輯 A：大老二模式
-        // -----------------------------
         if (mode === 'big2') {
             let totalPenalty = 0;
             let roundCards = {};
@@ -620,9 +613,6 @@
                 else roundScores[id] = -roundPenalties[id]; 
             }
         } 
-        // -----------------------------
-        // 邏輯 B：十三張模式
-        // -----------------------------
         else if (mode === '13cards') {
             let totalWin = 0;
             let totalLose = 0;
@@ -651,13 +641,10 @@
                 return;
             }
         }
-        // -----------------------------
-        // 邏輯 C：麻將模式 (剩餘點數自動換算)
-        // -----------------------------
         else if (mode === 'mahjong') {
             let totalPoints = 0;
+            let expectedTotalPoints = 0; 
             let hasInput = false;
-            let expectedTotalPoints = activePlayersCount * 200; // 幾個人打，總點數應為幾×200
 
             playersData.forEach(p => {
                 if (document.getElementById('active' + p.id).checked) {
@@ -669,8 +656,16 @@
                     }
                     totalPoints += points;
                     
-                    // 金額計算公式：(剩餘點數 - 底本200) * 10
-                    roundScores[p.id] = (points - 200) * 10;
+                    let nameInput = document.getElementById('name' + p.id);
+                    let playerName = nameInput ? nameInput.value : '';
+                    
+                    // 東無本，直接乘以10；其他人扣除200本金乘以10
+                    if (playerName === '東') {
+                        roundScores[p.id] = points * 10;
+                    } else {
+                        roundScores[p.id] = (points - 200) * 10;
+                        expectedTotalPoints += 200; // 每位「非東」的玩家，為總籌碼貢獻200本金
+                    }
                 }
             });
 
@@ -679,11 +674,11 @@
                 return;
             }
 
-            // 防呆檢查：麻將總點數必須剛好吻合
+            // 防呆檢查：全場點數是否吻合閒家底本總和
             if (totalPoints !== expectedTotalPoints) {
                 let diff = totalPoints - expectedTotalPoints;
                 let diffMsg = diff > 0 ? `多出了 ${diff} 點` : `短少了 ${Math.abs(diff)} 點`;
-                alert(`❌ 麻將點數不平衡！\n\n${activePlayersCount} 人局的總點數應為：${expectedTotalPoints}\n目前輸入的總點數為：${totalPoints}\n\n⚠️ 誤差：${diffMsg}\n請重新檢查大家的點數！`);
+                alert(`❌ 麻將點數不平衡！\n\n本局包含「東」(無本金)，其餘 ${activePlayersCount - 1} 名玩家底本總和應為：${expectedTotalPoints}\n目前全場輸入的總點數為：${totalPoints}\n\n⚠️ 誤差：${diffMsg}\n請大家重新清點手上的籌碼！`);
                 return;
             }
         }
