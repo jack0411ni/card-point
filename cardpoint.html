@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>終極桌遊計分台 (固定班底版)</title>
+    <title>終極桌遊計分台 (動態切換玩家版)</title>
     <style>
         body {
             font-family: "Microsoft JhengHei", Arial, sans-serif;
@@ -69,7 +69,7 @@
         
         /* 玩家列表區塊 */
         .player-row {
-            display: flex;
+            display: flex; /* 預設為 flex，後續由 JS 動態切換顯示/隱藏 */
             justify-content: space-between;
             align-items: center;
             margin-bottom: 12px;
@@ -278,7 +278,6 @@
 </div>
 
 <script>
-    // 重新排序：東固定第一位，接著是常見班底，其餘排後
     const initialPlayers = ['東', '母', '皮皮', '芝依', '大哥', '可芸', '樂樂', '小安', '傑克', '哥哥', '嫂子'];
     let playersData = [];
     let nextId = 0;
@@ -290,7 +289,6 @@
         });
         loadGameData();
         switchMode(); 
-        updateResultBoard({});
     };
 
     function addPlayer(name, isInitial = false) {
@@ -300,7 +298,7 @@
         let isDong = (name === '東');
         let list = document.getElementById('playerList');
         
-        // 針對「東」強制設定不可取消勾選與唯讀
+        // 針對「東」強制設定不可手動取消勾選與唯讀
         let checkboxHTML = isDong 
             ? `<input type="checkbox" id="active${id}" class="active-toggle" checked disabled title="東為固定班底，必須參加">`
             : `<input type="checkbox" id="active${id}" class="active-toggle" ${isInitial ? '' : 'checked'} onchange="togglePlayer(${id}); saveGameData();" title="是否參加本局">`;
@@ -314,15 +312,12 @@
                 ${checkboxHTML}
                 ${nameHTML}
                 
-                <!-- 三個獨立的總積分欄位 -->
                 <input type="number" id="scoreBig2_${id}" value="" placeholder="0" class="score-input score-big2" title="大老二積分" onchange="saveGameData(); updateResultBoard({});">
                 <input type="number" id="score13Cards_${id}" value="" placeholder="0" class="score-input score-13cards" title="十三張積分" style="display:none;" onchange="saveGameData(); updateResultBoard({});">
                 <input type="number" id="scoreMahjong_${id}" value="" placeholder="0" class="score-input score-mahjong" title="麻將積分" style="display:none;" onchange="saveGameData(); updateResultBoard({});">
                 
-                <!-- 大老二輸入框 (剩牌) -->
                 <input type="number" id="cardsInput${id}" value="" placeholder="0" min="0" class="cards-input">
                 
-                <!-- 十三張/麻將輸入框 (贏/輸) 共用樣式 -->
                 <div id="winloseInputs${id}" class="winlose-inputs">
                     <input type="number" id="winInput${id}" placeholder="贏" class="win-input" min="0">
                     <input type="number" id="loseInput${id}" placeholder="輸" class="lose-input" min="0">
@@ -331,7 +326,7 @@
         `;
         list.insertAdjacentHTML('beforeend', rowHTML);
 
-        // 初始化勾選狀態：東與常見班底(前6人)預設打勾
+        // 初始勾選：東(0)強制，母(1)到可芸(5)預設打勾
         if (isInitial && !isDong) {
             document.getElementById('active' + id).checked = (id < 6);
         }
@@ -355,12 +350,35 @@
         }
 
         playersData.forEach(p => {
+            let nameInput = document.getElementById('name' + p.id);
+            let isDong = (nameInput && nameInput.value === '東');
+            let row = document.getElementById('row' + p.id);
+            let activeCheckbox = document.getElementById('active' + p.id);
+
+            // 🌟 核心：判斷「東」的顯示與隱藏 🌟
+            if (isDong) {
+                if (mode === 'mahjong') {
+                    row.style.display = 'flex'; // 麻將模式顯示東
+                    activeCheckbox.checked = true; // 強制上場
+                } else {
+                    row.style.display = 'none'; // 其他模式隱藏東
+                    activeCheckbox.checked = false; // 取消勾選避免被誤算
+                }
+            } else {
+                row.style.display = 'flex'; // 其他玩家永遠顯示
+            }
+            
+            // 更新列的狀態 (灰底、輸入框禁用等)
+            togglePlayer(p.id);
+
+            // 隱藏所有分數與輸入框
             document.getElementById('scoreBig2_' + p.id).style.display = 'none';
             document.getElementById('score13Cards_' + p.id).style.display = 'none';
             document.getElementById('scoreMahjong_' + p.id).style.display = 'none';
             document.getElementById('cardsInput' + p.id).style.display = 'none';
             document.getElementById('winloseInputs' + p.id).style.display = 'none';
 
+            // 顯示對應模式的元件
             if (mode === 'big2') {
                 hint.innerHTML = '💡 大老二規則：<br><span style="color:#666; font-size:12px;">(一般) 剩9-12張x2 / 13張以上x4<br>(三人局) 剩13-16張x2 / 17張以上x4</span>';
                 inputTitle.innerHTML = '本輪剩牌';
@@ -449,11 +467,10 @@
                 let nameInput = document.getElementById('name' + data.id);
                 
                 if (activeCheckbox) {
-                    // 東的名字維持唯讀不被覆蓋
                     if (nameInput && data.name !== '東') nameInput.value = data.name;
                     
                     if (data.name === '東') {
-                        activeCheckbox.checked = true; // 強制東為勾選狀態
+                        // 東的打勾狀態會交由 switchMode 判定，這裡先讀取分數
                     } else {
                         activeCheckbox.checked = data.active;
                     }
@@ -681,7 +698,15 @@
         resultBody.innerHTML = ''; 
 
         playersData.forEach(p => {
-            let playerName = document.getElementById('name' + p.id).value;
+            let nameInput = document.getElementById('name' + p.id);
+            let playerName = nameInput ? nameInput.value : '';
+            let isDong = (playerName === '東');
+            
+            // 如果是在非麻將模式下，且玩家是「東」，則戰況表也不顯示他
+            if (isDong && mode !== 'mahjong') {
+                return;
+            }
+            
             let isActive = document.getElementById('active' + p.id).checked;
             
             let currentScoreId = mode === 'big2' ? 'scoreBig2_' + p.id : 
