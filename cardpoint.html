@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>終極桌遊計分台 (東專屬特權版)</title>
+    <title>終極桌遊計分台 (月底總結版)</title>
     <style>
         body {
             font-family: "Microsoft JhengHei", Arial, sans-serif;
@@ -31,168 +31,85 @@
             margin-bottom: 5px;
         }
         
-        /* 模式切換選單 */
-        .mode-selector {
-            text-align: center;
-            margin-bottom: 10px;
-        }
+        .mode-selector { text-align: center; margin-bottom: 10px; }
         .mode-selector select {
-            padding: 8px 15px;
-            font-size: 16px;
-            font-weight: bold;
-            border-radius: 5px;
-            border: 2px solid #333;
-            background-color: #fff;
-            cursor: pointer;
+            padding: 8px 15px; font-size: 16px; font-weight: bold;
+            border-radius: 5px; border: 2px solid #333;
+            background-color: #fff; cursor: pointer;
         }
         
         .rule-hint {
-            text-align: center;
-            color: #d32f2f;
-            font-size: 13px;
-            font-weight: bold;
-            margin-bottom: 15px;
-            min-height: 35px;
+            text-align: center; color: #d32f2f; font-size: 13px;
+            font-weight: bold; margin-bottom: 15px; min-height: 35px;
         }
         
-        /* 列表標題列 */
         .list-header {
-            display: flex;
-            justify-content: space-between;
-            font-size: 14px;
-            color: #666;
-            margin-bottom: 8px;
-            padding: 0 5px;
-            font-weight: bold;
-            text-align: center;
+            display: flex; justify-content: space-between; font-size: 14px;
+            color: #666; margin-bottom: 8px; padding: 0 5px;
+            font-weight: bold; text-align: center;
         }
         
-        /* 玩家列表區塊 */
         .player-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-            gap: 6px;
-            transition: opacity 0.3s;
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 12px; gap: 6px; transition: opacity 0.3s;
         }
         .player-row.disabled { opacity: 0.5; }
-        .active-toggle {
-            width: 22px;
-            height: 22px;
-            cursor: pointer;
-            accent-color: #4CAF50;
-            margin: 0;
-        }
-        .active-toggle:disabled {
-            cursor: not-allowed;
-            filter: grayscale(100%);
-        }
+        .active-toggle { width: 22px; height: 22px; cursor: pointer; accent-color: #4CAF50; margin: 0; }
+        .active-toggle:disabled { cursor: not-allowed; filter: grayscale(100%); }
         .name-input {
-            flex: 1;
-            min-width: 55px;
-            padding: 8px 5px;
-            font-size: 16px;
-            font-weight: bold;
-            border: 1px solid #ccc;
-            border-radius: 4px;
+            flex: 1; min-width: 55px; padding: 8px 5px; font-size: 16px;
+            font-weight: bold; border: 1px solid #ccc; border-radius: 4px;
             background-color: #f8f9fa; 
         }
-        .name-input.fixed {
-            background-color: #e0e0e0;
-            color: #555;
-        }
+        .name-input.fixed { background-color: #e0e0e0; color: #555; }
         
-        /* 獨立總積分欄位樣式 */
         .score-input {
-            width: 70px;
-            padding: 8px 2px;
-            font-size: 16px;
-            text-align: right;
-            border-radius: 4px;
-            font-weight: bold;
+            width: 70px; padding: 8px 2px; font-size: 16px;
+            text-align: right; border-radius: 4px; font-weight: bold;
         }
         .score-big2 { border: 1px solid #90caf9; background-color: #e3f2fd; }
         .score-13cards { border: 1px solid #ce93d8; background-color: #f3e5f5; }
         .score-mahjong { border: 1px solid #81c784; background-color: #e8f5e9; color: #1b5e20; }
         
-        /* 統一的數字輸入框 (大老二剩牌 / 麻將剩點) */
         .cards-input, .mahjong-points-input {
-            width: 95px; 
-            padding: 8px 5px;
-            font-size: 16px;
-            text-align: right;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            box-sizing: border-box;
+            width: 95px; padding: 8px 5px; font-size: 16px;
+            text-align: right; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;
         }
         .cards-input:disabled, .mahjong-points-input:disabled { background-color: #e9ecef; cursor: not-allowed; }
 
-        /* 十三張 雙格輸入框 (贏/輸) */
-        .winlose-inputs {
-            width: 95px;
-            display: none; 
-            gap: 4px;
-            align-items: center;
-            justify-content: space-between;
-        }
-        .win-input, .lose-input {
-            width: 44px;
-            padding: 8px 2px;
-            font-size: 15px;
-            text-align: center;
-            border-radius: 4px;
-            font-weight: bold;
-        }
+        .winlose-inputs { width: 95px; display: none; gap: 4px; align-items: center; justify-content: space-between; }
+        .win-input, .lose-input { width: 44px; padding: 8px 2px; font-size: 15px; text-align: center; border-radius: 4px; font-weight: bold; }
         .win-input { border: 1px solid #ffcdd2; background-color: #ffebee; color: #c62828; }
         .lose-input { border: 1px solid #bbdefb; background-color: #e3f2fd; color: #1565c0; }
         .win-input:disabled, .lose-input:disabled { background-color: #f5f5f5; border-color: #e0e0e0; color: #9e9e9e; cursor: not-allowed; }
 
-        /* 新增玩家按鈕 */
         .add-btn {
-            width: 100%;
-            padding: 10px;
-            background-color: #f1f3f4;
-            color: #555;
-            border: 2px dashed #ccc;
-            border-radius: 5px;
-            font-size: 15px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-bottom: 20px;
-            margin-top: 5px;
+            width: 100%; padding: 10px; background-color: #f1f3f4;
+            color: #555; border: 2px dashed #ccc; border-radius: 5px;
+            font-size: 15px; font-weight: bold; cursor: pointer;
+            margin-bottom: 20px; margin-top: 5px;
         }
         .add-btn:hover { background-color: #e2e6ea; }
         
-        /* 按鈕區塊 */
         .action-area { margin-top: 10px; }
         .calc-btn {
-            width: 100%;
-            padding: 15px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 18px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-bottom: 10px;
+            width: 100%; padding: 15px; background-color: #4CAF50;
+            color: white; border: none; border-radius: 5px; font-size: 18px;
+            font-weight: bold; cursor: pointer; margin-bottom: 10px;
         }
         .calc-btn:hover { background-color: #45a049; }
         
-        .sub-btn-group {
-            display: flex;
-            gap: 8px;
+        .grand-total-btn {
+            width: 100%; padding: 15px; background-color: #9c27b0;
+            color: white; border: none; border-radius: 5px; font-size: 18px;
+            font-weight: bold; cursor: pointer; margin-bottom: 10px;
         }
+        .grand-total-btn:hover { background-color: #7b1fa2; }
+
+        .sub-btn-group { display: flex; gap: 8px; }
         .sub-btn-group button {
-            flex: 1;
-            padding: 10px 5px;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 14px;
-            font-weight: bold;
-            cursor: pointer;
+            flex: 1; padding: 10px 5px; color: white; border: none;
+            border-radius: 5px; font-size: 14px; font-weight: bold; cursor: pointer;
         }
         .undo-btn { background-color: #ff9800; }
         .undo-btn:hover { background-color: #e68a00; }
@@ -201,23 +118,9 @@
         .reset-btn { background-color: #f44336; }
         .reset-btn:hover { background-color: #da190b; }
         
-        /* 結果區塊 */
-        .result-box {
-            margin-top: 20px;
-            padding: 15px;
-            background-color: #e9ecef;
-            border-radius: 5px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-            text-align: center;
-        }
-        th, td {
-            padding: 8px 5px;
-            border-bottom: 1px solid #ccc;
-        }
+        .result-box { margin-top: 20px; padding: 15px; background-color: #e9ecef; border-radius: 5px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; text-align: center; }
+        th, td { padding: 8px 5px; border-bottom: 1px solid #ccc; }
         th { font-size: 14px; color: #555; }
         td { font-size: 16px; font-weight: bold; }
         
@@ -254,6 +157,7 @@
 
     <div class="action-area">
         <button class="calc-btn" onclick="calculateRound()">💰 計算本輪</button>
+        <button class="grand-total-btn" onclick="showGrandTotal()">🏆 月底總結算</button>
         <div class="sub-btn-group">
             <button class="undo-btn" onclick="undoRound()">↩ 復原</button>
             <button class="check-btn" onclick="checkTotalScores()">⚖️ 驗算</button>
@@ -276,7 +180,6 @@
         </table>
     </div>
 </div>
-
 <script>
     const initialPlayers = ['東', '母', '皮皮', '芝依', '大哥', '可芸', '樂樂', '小安', '傑克', '哥哥', '嫂子'];
     let playersData = [];
@@ -284,9 +187,7 @@
     let historyData = null; 
 
     window.onload = () => {
-        initialPlayers.forEach(name => {
-            addPlayer(name, true);
-        });
+        initialPlayers.forEach(name => { addPlayer(name, true); });
         loadGameData();
         switchMode(); 
     };
@@ -310,14 +211,11 @@
             <div class="player-row" id="row${id}">
                 ${checkboxHTML}
                 ${nameHTML}
-                
                 <input type="number" id="scoreBig2_${id}" value="" placeholder="0" class="score-input score-big2" title="大老二積分" onchange="saveGameData(); updateResultBoard({});">
                 <input type="number" id="score13Cards_${id}" value="" placeholder="0" class="score-input score-13cards" title="十三張積分" style="display:none;" onchange="saveGameData(); updateResultBoard({});">
                 <input type="number" id="scoreMahjong_${id}" value="" placeholder="0" class="score-input score-mahjong" title="麻將積分" style="display:none;" onchange="saveGameData(); updateResultBoard({});">
-                
                 <input type="number" id="cardsInput${id}" value="" placeholder="0" min="0" class="cards-input">
                 <input type="number" id="mahjongPointsInput${id}" value="" placeholder="0" min="0" class="mahjong-points-input" style="display:none;">
-                
                 <div id="winloseInputs${id}" class="winlose-inputs">
                     <input type="number" id="winInput${id}" placeholder="贏" class="win-input" min="0">
                     <input type="number" id="loseInput${id}" placeholder="輸" class="lose-input" min="0">
@@ -325,28 +223,16 @@
             </div>
         `;
         list.insertAdjacentHTML('beforeend', rowHTML);
-
-        if (isInitial && !isDong) {
-            document.getElementById('active' + id).checked = (id < 6);
-        }
-
+        if (isInitial && !isDong) { document.getElementById('active' + id).checked = (id < 6); }
         togglePlayer(id);
-        
-        if (!isInitial) {
-            switchMode();
-        }
+        if (!isInitial) { switchMode(); }
     }
 
     function switchMode() {
         const mode = document.getElementById('gameMode').value;
         const hint = document.getElementById('ruleHint');
         const inputTitle = document.getElementById('roundInputTitle');
-        
-        if (mode === 'mahjong') {
-            document.body.style.backgroundColor = '#f1f8e9'; 
-        } else {
-            document.body.style.backgroundColor = '#f4f4f9';
-        }
+        document.body.style.backgroundColor = (mode === 'mahjong') ? '#f1f8e9' : '#f4f4f9'; 
 
         playersData.forEach(p => {
             let nameInput = document.getElementById('name' + p.id);
@@ -355,38 +241,26 @@
             let activeCheckbox = document.getElementById('active' + p.id);
 
             if (isDong) {
-                if (mode === 'mahjong') {
-                    row.style.display = 'flex'; 
-                    activeCheckbox.checked = true; 
-                } else {
-                    row.style.display = 'none'; 
-                    activeCheckbox.checked = false; 
-                }
-            } else {
-                row.style.display = 'flex'; 
-            }
+                if (mode === 'mahjong') { row.style.display = 'flex'; activeCheckbox.checked = true; } 
+                else { row.style.display = 'none'; activeCheckbox.checked = false; }
+            } else { row.style.display = 'flex'; }
             
             togglePlayer(p.id);
 
-            document.getElementById('scoreBig2_' + p.id).style.display = 'none';
-            document.getElementById('score13Cards_' + p.id).style.display = 'none';
-            document.getElementById('scoreMahjong_' + p.id).style.display = 'none';
-            document.getElementById('cardsInput' + p.id).style.display = 'none';
-            document.getElementById('mahjongPointsInput' + p.id).style.display = 'none';
-            document.getElementById('winloseInputs' + p.id).style.display = 'none';
+            ['scoreBig2_', 'score13Cards_', 'scoreMahjong_', 'cardsInput', 'mahjongPointsInput', 'winloseInputs'].forEach(idPrefix => {
+                document.getElementById(idPrefix + p.id).style.display = 'none';
+            });
 
             if (mode === 'big2') {
                 hint.innerHTML = '💡 大老二規則：<br><span style="color:#666; font-size:12px;">(一般) 剩9-12張x2 / 13張以上x4<br>(三人局) 剩13-16張x2 / 17張以上x4</span>';
                 inputTitle.innerHTML = '本輪剩牌';
                 document.getElementById('scoreBig2_' + p.id).style.display = 'inline-block';
                 document.getElementById('cardsInput' + p.id).style.display = 'block';
-                
             } else if (mode === '13cards') {
                 hint.innerHTML = '💡 十三張規則：分別填入玩家該局「贏的分數」與「輸的分數」<br><span style="color:#666; font-size:11px;">(全場總贏分必須等於總輸分)</span>';
                 inputTitle.innerHTML = '<span style="color:#d32f2f">贏</span> / <span style="color:#1976d2">輸</span>';
                 document.getElementById('score13Cards_' + p.id).style.display = 'inline-block';
                 document.getElementById('winloseInputs' + p.id).style.display = 'flex';
-                
             } else if (mode === 'mahjong') {
                 hint.innerHTML = '💡 麻將規則：輸入數完後的【剩餘點數】<br><span style="color:#666; font-size:11px;">(東為特權無底本，其餘底本200點，點數不符會自動警告)</span>';
                 inputTitle.innerHTML = '剩餘點數';
@@ -394,144 +268,91 @@
                 document.getElementById('mahjongPointsInput' + p.id).style.display = 'block';
             }
         });
-        
         localStorage.setItem('cardGameMode_v3', mode);
         updateResultBoard({}); 
     }
 
     function togglePlayer(id) {
         const isChecked = document.getElementById('active' + id).checked;
-        const cardsInput = document.getElementById('cardsInput' + id);
-        const mahjongPointsInput = document.getElementById('mahjongPointsInput' + id);
-        const winInput = document.getElementById('winInput' + id);
-        const loseInput = document.getElementById('loseInput' + id);
+        const els = ['cardsInput', 'mahjongPointsInput', 'winInput', 'loseInput'].map(elId => document.getElementById(elId + id));
         const row = document.getElementById('row' + id);
         
+        els.forEach(el => el.disabled = !isChecked);
         if (isChecked) {
-            cardsInput.disabled = false;
-            mahjongPointsInput.disabled = false;
-            winInput.disabled = false;
-            loseInput.disabled = false;
             row.classList.remove('disabled');
         } else {
-            cardsInput.disabled = true;
-            mahjongPointsInput.disabled = true;
-            winInput.disabled = true;
-            loseInput.disabled = true;
-            
-            cardsInput.value = ''; 
-            mahjongPointsInput.value = '';
-            winInput.value = '';
-            loseInput.value = '';
+            els.forEach(el => el.value = '');
             row.classList.add('disabled');
         }
     }
 
     function saveGameData() {
-        let saveArray = [];
-        playersData.forEach(p => {
+        let saveArray = playersData.map(p => {
             let nameInput = document.getElementById('name' + p.id);
-            saveArray.push({
-                id: p.id,
-                name: nameInput ? nameInput.value : p.name,
+            return {
+                id: p.id, name: nameInput ? nameInput.value : p.name,
                 active: document.getElementById('active' + p.id).checked,
                 scoreBig2: parseInt(document.getElementById('scoreBig2_' + p.id).value) || 0,
                 score13Cards: parseInt(document.getElementById('score13Cards_' + p.id).value) || 0,
                 scoreMahjong: parseInt(document.getElementById('scoreMahjong_' + p.id).value) || 0
-            });
+            };
         });
         localStorage.setItem('cardGameData_v3', JSON.stringify(saveArray)); 
     }
 
     function loadGameData() {
         let savedMode = localStorage.getItem('cardGameMode_v3');
-        if (savedMode) {
-            document.getElementById('gameMode').value = savedMode;
-        }
+        if (savedMode) document.getElementById('gameMode').value = savedMode;
 
         let saved = localStorage.getItem('cardGameData_v3');
         if (saved) {
             let saveArray = JSON.parse(saved);
-            
             if (saveArray.length > initialPlayers.length) {
-                for (let i = initialPlayers.length; i < saveArray.length; i++) {
-                    addPlayer(saveArray[i].name, false);
-                }
+                for (let i = initialPlayers.length; i < saveArray.length; i++) addPlayer(saveArray[i].name, false);
             }
-
             saveArray.forEach(data => {
                 let activeCheckbox = document.getElementById('active' + data.id);
-                let scoreBig2 = document.getElementById('scoreBig2_' + data.id);
-                let score13Cards = document.getElementById('score13Cards_' + data.id);
-                let scoreMahjong = document.getElementById('scoreMahjong_' + data.id);
-                let nameInput = document.getElementById('name' + data.id);
-                
                 if (activeCheckbox) {
+                    let nameInput = document.getElementById('name' + data.id);
                     if (nameInput && data.name !== '東') nameInput.value = data.name;
-                    
-                    if (data.name !== '東') {
-                        activeCheckbox.checked = data.active;
-                    }
-
-                    scoreBig2.value = data.scoreBig2 === 0 ? '' : data.scoreBig2;
-                    score13Cards.value = data.score13Cards === 0 ? '' : data.score13Cards;
-                    scoreMahjong.value = data.scoreMahjong === 0 ? '' : data.scoreMahjong;
+                    if (data.name !== '東') activeCheckbox.checked = data.active;
+                    document.getElementById('scoreBig2_' + data.id).value = data.scoreBig2 === 0 ? '' : data.scoreBig2;
+                    document.getElementById('score13Cards_' + data.id).value = data.score13Cards === 0 ? '' : data.score13Cards;
+                    document.getElementById('scoreMahjong_' + data.id).value = data.scoreMahjong === 0 ? '' : data.scoreMahjong;
                     togglePlayer(data.id); 
                 }
             });
         }
-        
         let savedHistory = localStorage.getItem('cardGameHistory_v3');
-        if (savedHistory) {
-            historyData = JSON.parse(savedHistory);
-        }
+        if (savedHistory) historyData = JSON.parse(savedHistory);
     }
 
     function backupHistory() {
-        historyData = [];
-        playersData.forEach(p => {
-            historyData.push({
-                id: p.id,
-                active: document.getElementById('active' + p.id).checked,
-                scoreBig2: parseInt(document.getElementById('scoreBig2_' + p.id).value) || 0,
-                score13Cards: parseInt(document.getElementById('score13Cards_' + p.id).value) || 0,
-                scoreMahjong: parseInt(document.getElementById('scoreMahjong_' + p.id).value) || 0
-            });
-        });
+        historyData = playersData.map(p => ({
+            id: p.id, active: document.getElementById('active' + p.id).checked,
+            scoreBig2: parseInt(document.getElementById('scoreBig2_' + p.id).value) || 0,
+            score13Cards: parseInt(document.getElementById('score13Cards_' + p.id).value) || 0,
+            scoreMahjong: parseInt(document.getElementById('scoreMahjong_' + p.id).value) || 0
+        }));
         localStorage.setItem('cardGameHistory_v3', JSON.stringify(historyData));
     }
 
     function undoRound() {
-        if (!historyData || historyData.length === 0) {
-            alert("⚠️ 目前沒有上一步的分數可以復原！");
-            return;
-        }
-        
+        if (!historyData || historyData.length === 0) return alert("⚠️ 目前沒有上一步的分數可以復原！");
         if (confirm("確定要取消上一次的計算，復原回上一步的分數嗎？")) {
             historyData.forEach(data => {
                 let activeCheckbox = document.getElementById('active' + data.id);
-                let scoreBig2 = document.getElementById('scoreBig2_' + data.id);
-                let score13Cards = document.getElementById('score13Cards_' + data.id);
-                let scoreMahjong = document.getElementById('scoreMahjong_' + data.id);
-                
                 if (activeCheckbox) {
-                    if (document.getElementById('name' + data.id).value !== '東') {
-                        activeCheckbox.checked = data.active;
-                    }
-                    scoreBig2.value = data.scoreBig2 === 0 ? '' : data.scoreBig2;
-                    score13Cards.value = data.score13Cards === 0 ? '' : data.score13Cards;
-                    scoreMahjong.value = data.scoreMahjong === 0 ? '' : data.scoreMahjong;
+                    if (document.getElementById('name' + data.id).value !== '東') activeCheckbox.checked = data.active;
+                    document.getElementById('scoreBig2_' + data.id).value = data.scoreBig2 === 0 ? '' : data.scoreBig2;
+                    document.getElementById('score13Cards_' + data.id).value = data.score13Cards === 0 ? '' : data.score13Cards;
+                    document.getElementById('scoreMahjong_' + data.id).value = data.scoreMahjong === 0 ? '' : data.scoreMahjong;
                     togglePlayer(data.id);
                 }
             });
-            
             playersData.forEach(p => {
-                document.getElementById('cardsInput' + p.id).value = '';
-                document.getElementById('mahjongPointsInput' + p.id).value = '';
-                document.getElementById('winInput' + p.id).value = '';
-                document.getElementById('loseInput' + p.id).value = '';
+                ['cardsInput', 'mahjongPointsInput', 'winInput', 'loseInput'].forEach(idPrefix => document.getElementById(idPrefix + p.id).value = '');
             });
-
             saveGameData();
             updateResultBoard({});
         }
@@ -540,146 +361,112 @@
     function checkTotalScores() {
         const mode = document.getElementById('gameMode').value;
         const modeNames = { 'big2': '大老二', '13cards': '十三張', 'mahjong': '麻將' };
-        const modeName = modeNames[mode];
         let totalSum = 0;
-
         playersData.forEach(p => {
-            let currentScoreId = mode === 'big2' ? 'scoreBig2_' + p.id : 
-                                 (mode === '13cards' ? 'score13Cards_' + p.id : 'scoreMahjong_' + p.id);
-            let score = parseInt(document.getElementById(currentScoreId).value) || 0;
-            totalSum += score;
+            let currentScoreId = mode === 'big2' ? 'scoreBig2_' + p.id : (mode === '13cards' ? 'score13Cards_' + p.id : 'scoreMahjong_' + p.id);
+            totalSum += parseInt(document.getElementById(currentScoreId).value) || 0;
         });
 
-        if (totalSum === 0) {
-            alert(`✅ 【${modeName}】帳目正確！\n\n目前全場「總積分」加總剛好為 0。`);
-        } else if (totalSum > 0) {
-            alert(`❌ 【${modeName}】帳目有誤！\n\n目前全場加總多出了「+${totalSum}」。\n(贏的比輸的多，請檢查是誰少扣或多加了！)`);
-        } else {
-            alert(`❌ 【${modeName}】帳目有誤！\n\n目前全場加總短少了「${totalSum}」。\n(輸的比贏的多，請檢查是誰多扣或少加了！)`);
-        }
+        if (totalSum === 0) alert(`✅ 【${modeNames[mode]}】帳目正確！\n\n目前全場「總積分」加總剛好為 0。`);
+        else if (totalSum > 0) alert(`❌ 【${modeNames[mode]}】帳目有誤！\n\n目前全場加總多出了「+${totalSum}」。`);
+        else alert(`❌ 【${modeNames[mode]}】帳目有誤！\n\n目前全場加總短少了「${totalSum}」。`);
+    }
+
+    function showGrandTotal() {
+        let report = "📊 【月底總結算報表】\n\n";
+        let grandSum = 0;
+        let hasData = false;
+
+        playersData.forEach(p => {
+            let nameInput = document.getElementById('name' + p.id);
+            let name = nameInput ? nameInput.value : '';
+            let big2 = parseInt(document.getElementById('scoreBig2_' + p.id).value) || 0;
+            let c13 = parseInt(document.getElementById('score13Cards_' + p.id).value) || 0;
+            let mj = parseInt(document.getElementById('scoreMahjong_' + p.id).value) || 0;
+
+            if (big2 !== 0 || c13 !== 0 || mj !== 0) {
+                hasData = true;
+                let big2Money = big2 * 5;
+                let c13Money = c13 * 10;
+                let totalMoney = big2Money + c13Money + mj;
+                grandSum += totalMoney;
+
+                let totalStr = totalMoney > 0 ? '+' + totalMoney : totalMoney;
+                let big2Str = big2Money > 0 ? '+' + big2Money : big2Money;
+                let c13Str = c13Money > 0 ? '+' + c13Money : c13Money;
+                let mjStr = mj > 0 ? '+' + mj : mj;
+
+                report += `🔹 ${name}：總計 ${totalStr} 元\n   (老二 ${big2Str} ｜ 十三 ${c13Str} ｜ 麻將 ${mjStr})\n\n`;
+            }
+        });
+
+        if (!hasData) return alert("⚠️ 目前沒有任何遊戲的計分紀錄！");
+
+        report += "====================\n";
+        if (grandSum === 0) report += `✅ 帳目自洽完美！全場總和為 0 元。`;
+        else report += `❌ 帳目有誤！全場總和不為 0\n⚠️ 誤差金額：${grandSum > 0 ? '+' : ''}${grandSum} 元\n(請先使用各模式的「⚖️ 驗算」抓出哪個遊戲算錯了)`;
+
+        alert(report);
     }
 
     function getPenaltyPoints(cards, activeCount) {
-        if (activeCount === 3) {
-            if (cards >= 17) return cards * 4;
-            else if (cards >= 13 && cards <= 16) return cards * 2;
-            else return cards;
-        } else {
-            if (cards >= 13) return cards * 4;
-            else if (cards >= 9 && cards <= 12) return cards * 2;
-            else return cards;
-        }
+        if (activeCount === 3) return (cards >= 17) ? cards * 4 : (cards >= 13 ? cards * 2 : cards);
+        else return (cards >= 13) ? cards * 4 : (cards >= 9 ? cards * 2 : cards);
     }
 
     function calculateRound() {
         const mode = document.getElementById('gameMode').value;
-        let activePlayersCount = 0;
+        let activePlayersCount = playersData.filter(p => document.getElementById('active' + p.id).checked).length;
+        if (activePlayersCount < 2) return alert("至少需要兩位玩家參加才能計算！");
+        
         let roundScores = {}; 
         
-        playersData.forEach(p => {
-            if (document.getElementById('active' + p.id).checked) {
-                activePlayersCount++;
-            }
-        });
-
-        if (activePlayersCount < 2) {
-            alert("至少需要兩位玩家參加才能計算！");
-            return;
-        }
-        
         if (mode === 'big2') {
-            let totalPenalty = 0;
-            let roundCards = {};
-            let roundPenalties = {};
-
+            let totalPenalty = 0, roundCards = {}, roundPenalties = {};
             playersData.forEach(p => {
                 if (document.getElementById('active' + p.id).checked) {
                     let cards = parseInt(document.getElementById('cardsInput' + p.id).value) || 0;
-                    roundCards[p.id] = cards;
-                    
                     let penalty = getPenaltyPoints(cards, activePlayersCount);
-                    roundPenalties[p.id] = penalty;
-                    totalPenalty += penalty;
+                    roundCards[p.id] = cards; roundPenalties[p.id] = penalty; totalPenalty += penalty;
                 }
             });
-
-            if (totalPenalty === 0) {
-                alert("請至少輸入一位輸家的剩餘牌數！");
-                return;
-            }
-
-            for (let id in roundCards) {
-                if (roundCards[id] === 0) roundScores[id] = totalPenalty; 
-                else roundScores[id] = -roundPenalties[id]; 
-            }
+            if (totalPenalty === 0) return alert("請至少輸入一位輸家的剩餘牌數！");
+            for (let id in roundCards) roundScores[id] = (roundCards[id] === 0) ? totalPenalty : -roundPenalties[id];
         } 
         else if (mode === '13cards') {
-            let totalWin = 0;
-            let totalLose = 0;
-            let hasInput = false;
-
+            let totalWin = 0, totalLose = 0, hasInput = false;
             playersData.forEach(p => {
                 if (document.getElementById('active' + p.id).checked) {
                     let win = parseInt(document.getElementById('winInput' + p.id).value) || 0;
                     let lose = parseInt(document.getElementById('loseInput' + p.id).value) || 0;
-                    
                     if (win !== 0 || lose !== 0) hasInput = true;
-                    
-                    totalWin += win;
-                    totalLose += lose;
-                    roundScores[p.id] = win - lose; 
+                    totalWin += win; totalLose += lose; roundScores[p.id] = win - lose;
                 }
             });
-
-            if (!hasInput) {
-                alert("請填寫玩家的贏分或輸分！");
-                return;
-            }
-
-            if (totalWin !== totalLose) {
-                alert(`❌ 記分錯誤！\n\n全場【總贏: ${totalWin}】\n全場【總輸: ${totalLose}】\n\n兩者不相等，請檢查是誰報錯分數了！`);
-                return;
-            }
+            if (!hasInput) return alert("請填寫玩家的贏分或輸分！");
+            if (totalWin !== totalLose) return alert(`❌ 記分錯誤！\n\n全場【總贏: ${totalWin}】\n全場【總輸: ${totalLose}】\n\n兩者不相等，請檢查是誰報錯分數了！`);
         }
         else if (mode === 'mahjong') {
-            let totalPoints = 0;
-            let expectedTotalPoints = 0; 
-            let hasInput = false;
-
+            let totalPoints = 0, expectedTotalPoints = 0, hasInput = false;
             playersData.forEach(p => {
                 if (document.getElementById('active' + p.id).checked) {
                     let points = parseInt(document.getElementById('mahjongPointsInput' + p.id).value);
-                    if (!isNaN(points)) {
-                        hasInput = true;
-                    } else {
-                        points = 0;
-                    }
+                    if (!isNaN(points)) hasInput = true; else points = 0;
                     totalPoints += points;
                     
-                    let nameInput = document.getElementById('name' + p.id);
-                    let playerName = nameInput ? nameInput.value : '';
-                    
-                    // 東無本，直接乘以10；其他人扣除200本金乘以10
+                    let playerName = document.getElementById('name' + p.id).value;
                     if (playerName === '東') {
                         roundScores[p.id] = points * 10;
                     } else {
                         roundScores[p.id] = (points - 200) * 10;
-                        expectedTotalPoints += 200; // 每位「非東」的玩家，為總籌碼貢獻200本金
+                        expectedTotalPoints += 200; 
                     }
                 }
             });
-
-            if (!hasInput) {
-                alert("請輸入大家的剩餘點數！");
-                return;
-            }
-
-            // 防呆檢查：全場點數是否吻合閒家底本總和
+            if (!hasInput) return alert("請輸入大家的剩餘點數！");
             if (totalPoints !== expectedTotalPoints) {
                 let diff = totalPoints - expectedTotalPoints;
-                let diffMsg = diff > 0 ? `多出了 ${diff} 點` : `短少了 ${Math.abs(diff)} 點`;
-                alert(`❌ 麻將點數不平衡！\n\n本局包含「東」(無本金)，其餘 ${activePlayersCount - 1} 名玩家底本總和應為：${expectedTotalPoints}\n目前全場輸入的總點數為：${totalPoints}\n\n⚠️ 誤差：${diffMsg}\n請大家重新清點手上的籌碼！`);
-                return;
+                return alert(`❌ 麻將點數不平衡！\n\n本局包含「東」(無本金)，其餘玩家底本總和應為：${expectedTotalPoints}\n目前全場總點數為：${totalPoints}\n⚠️ 誤差：${diff > 0 ? '多出 '+diff : '短少 '+Math.abs(diff)} 點`);
             }
         }
 
@@ -687,18 +474,10 @@
 
         playersData.forEach(p => {
             if (document.getElementById('active' + p.id).checked) {
-                let currentScoreId = mode === 'big2' ? 'scoreBig2_' + p.id : 
-                                     (mode === '13cards' ? 'score13Cards_' + p.id : 'scoreMahjong_' + p.id);
-                
-                let currentScore = parseInt(document.getElementById(currentScoreId).value) || 0;
-                let newScore = currentScore + roundScores[p.id];
-                
+                let currentScoreId = mode === 'big2' ? 'scoreBig2_' + p.id : (mode === '13cards' ? 'score13Cards_' + p.id : 'scoreMahjong_' + p.id);
+                let newScore = (parseInt(document.getElementById(currentScoreId).value) || 0) + roundScores[p.id];
                 document.getElementById(currentScoreId).value = newScore === 0 ? '' : newScore;
-                
-                document.getElementById('cardsInput' + p.id).value = '';
-                document.getElementById('mahjongPointsInput' + p.id).value = '';
-                document.getElementById('winInput' + p.id).value = '';
-                document.getElementById('loseInput' + p.id).value = '';
+                ['cardsInput', 'mahjongPointsInput', 'winInput', 'loseInput'].forEach(idPrefix => document.getElementById(idPrefix + p.id).value = '');
             }
         });
 
@@ -708,26 +487,17 @@
 
     function resetScores() {
         let answer = prompt("⚠️ 警告：這將會清空所有人的【所有模式】紀錄！\n\n如果您確定要全場歸零，請在下方輸入數字「0」並按確定：");
-        
         if (answer === "0") {
             playersData.forEach(p => {
-                document.getElementById('scoreBig2_' + p.id).value = '';
-                document.getElementById('score13Cards_' + p.id).value = '';
-                document.getElementById('scoreMahjong_' + p.id).value = '';
-                
+                ['scoreBig2_', 'score13Cards_', 'scoreMahjong_'].forEach(idPrefix => document.getElementById(idPrefix + p.id).value = '');
                 if (!document.getElementById('active' + p.id).disabled) {
-                    document.getElementById('cardsInput' + p.id).value = '';
-                    document.getElementById('mahjongPointsInput' + p.id).value = '';
-                    document.getElementById('winInput' + p.id).value = '';
-                    document.getElementById('loseInput' + p.id).value = '';
+                    ['cardsInput', 'mahjongPointsInput', 'winInput', 'loseInput'].forEach(idPrefix => document.getElementById(idPrefix + p.id).value = '');
                 }
             });
             updateResultBoard({});
-            
             localStorage.removeItem('cardGameData_v3');
             localStorage.removeItem('cardGameHistory_v3');
             historyData = null;
-            
             alert("全場所有分數已徹底歸零！");
         } else if (answer !== null) {
             alert("❌ 輸入錯誤，已取消歸零操作。");
@@ -740,19 +510,11 @@
         resultBody.innerHTML = ''; 
 
         playersData.forEach(p => {
-            let nameInput = document.getElementById('name' + p.id);
-            let playerName = nameInput ? nameInput.value : '';
-            let isDong = (playerName === '東');
-            
-            if (isDong && mode !== 'mahjong') {
-                return;
-            }
+            let playerName = document.getElementById('name' + p.id) ? document.getElementById('name' + p.id).value : '';
+            if (playerName === '東' && mode !== 'mahjong') return;
             
             let isActive = document.getElementById('active' + p.id).checked;
-            
-            let currentScoreId = mode === 'big2' ? 'scoreBig2_' + p.id : 
-                                 (mode === '13cards' ? 'score13Cards_' + p.id : 'scoreMahjong_' + p.id);
-            let currentScore = parseInt(document.getElementById(currentScoreId).value) || 0;
+            let currentScore = parseInt(document.getElementById(mode === 'big2' ? 'scoreBig2_' + p.id : (mode === '13cards' ? 'score13Cards_' + p.id : 'scoreMahjong_' + p.id)).value) || 0;
             
             let roundScoreStr = '-';
             let roundClass = '';
@@ -778,6 +540,5 @@
         });
     }
 </script>
-
 </body>
 </html>
